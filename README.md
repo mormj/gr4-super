@@ -114,6 +114,32 @@ The default build performs three independent configure/build/install cycles in
 dependency order. All three components are available through the aggregate
 `gr4` target, which is also the default target.
 
+### macOS with Homebrew
+
+Apple Clang supplied by the Command Line Tools may be too old for the C++23
+features used by GNU Radio 4. The tracked
+`CMakeUserPresets.json.mac.example` selects Homebrew LLVM and provides separate
+development and full-workspace profiles. It assumes an Apple Silicon Homebrew
+prefix (`/opt/homebrew`); on Intel Macs, replace `/opt/homebrew` with
+`/usr/local` in the copied file.
+
+```sh
+brew install cmake ninja llvm
+cp CMakeUserPresets.json.mac.example CMakeUserPresets.json
+
+cmake --preset dev-mac
+cmake --build --preset dev-mac
+source build/dev-mac/activate.sh
+```
+
+For the complete workspace, use `full-mac` in place of `dev-mac`. It also
+requires Node.js 22 and npm. If ccache cannot write to its cache directory,
+disable it for the build:
+
+```sh
+CCACHE_DISABLE=1 cmake --build --preset full-mac
+```
+
 ### Build profiles
 
 | Preset | Configuration | Intended use | Install prefix |
@@ -295,12 +321,16 @@ cmake --build --preset dev --target gnuradio4-blocks
 ### Build incubator, control-plane, and Studio
 
 The `full` preset adds gr4-incubator, control-plane, Studio's CMake block
-plugins, and the Node/Vite desktop application:
+plugins, and the Node/Vite desktop application. It enables incubator's plugin
+build so its blocks and schedulers are installed and discoverable at runtime.
+Incubator keeps its standalone warning policy because plugin builds include
+third-party headers that may emit compiler warnings:
 
 ```sh
 cmake --preset full
 cmake --build --preset full
 source build/full/activate.sh
+gr4-studio-sandbox-setup # one-time setup on Ubuntu/AppArmor hosts
 gr4-studio
 ```
 
@@ -310,7 +340,7 @@ The build installs the following into `install/full/`:
 bin/gr4cp_server
 bin/gr4cp-cli
 bin/gr4-studio
-lib/                         # GNU Radio and Studio plugins
+lib/                         # GNU Radio, control-plane, and Studio libraries/plugins
 share/gr4-studio/            # frontend and desktop assets
 ```
 
@@ -324,9 +354,32 @@ cmake --build --preset full --target gnuradio4-studio
 ```
 
 `gnuradio4-studio` installs its locked npm dependencies, builds the desktop
-bundle, and installs it into the profile prefix. The dependency installation is
-repeated automatically when `package.json` or `package-lock.json` changes. Its
-build depends on both the Studio blocks and control-plane in the `full` preset.
+bundle, and installs it with a pinned Electron runtime into the profile prefix.
+The launcher never downloads an ad hoc Electron release through `npx`. The
+dependency installation is repeated automatically when `package.json` or
+`package-lock.json` changes. Its build depends on both the Studio blocks and
+control-plane in the `full` preset.
+
+For a local launch, Studio treats the block catalog as the readiness boundary:
+the startup screen remains in place until `GET /blocks` returns a valid catalog.
+If `gr4cp_server` exits during startup, the launcher stops and prints the
+backend log instead of opening an unusable canvas. Each run reserves an
+available loopback port and passes that exact endpoint to Studio; local mode
+does not require port 8080 to be free.
+
+Ubuntu releases that restrict unprivileged user namespaces through AppArmor
+need a one-time profile installation after the first Studio build:
+
+```sh
+source build/full/activate.sh
+gr4-studio-sandbox-setup
+```
+
+The setup command installs a path-specific AppArmor profile for the Electron
+runtime under the active prefix and therefore requests `sudo`. It remains valid
+across rebuilds at that prefix. Use `gr4-studio-sandbox-setup --remove` before
+permanently deleting or relocating the prefix. Hosts without AppArmor user
+namespace restrictions do not need to run the helper.
 
 The Studio blocks declaration currently carries two compatibility arguments in
 `modules.cmake`: it disables the libstdc++ TBB parallel backend for the current
