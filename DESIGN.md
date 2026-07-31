@@ -50,12 +50,16 @@ options, generated files, and test tree.
 
 ## Deliberate simplifications
 
-- The primary and optional upstream repositories are declared directly in
-  `CMakeLists.txt`; a separate YAML parser is unnecessary for this small graph.
+- An ordered `modules.cmake` manifest declares repositories, dependencies,
+  adapter types, tests, and profile groups without requiring a YAML parser.
+- The same registration API is available to the ignored
+  `projects.local.cmake` manifest for local and out-of-tree modules.
 - CMake clones only missing first-party sources. A guarded download script
-  refuses to replace a non-empty directory and never updates an existing
-  working copy, so normal branch-based development remains safe.
-- A preset replaces shared argument files for the common configuration.
+  requires the module's expected source marker, refuses to replace a malformed
+  or non-empty directory, and never updates an existing working copy, so normal
+  branch-based development remains safe.
+- Presets select named module groups and replace shared argument files for the
+  common configurations.
 - Global and per-component cache variables plus `projects.local.cmake` replace
   per-repository argument files.
 - Package and feature selection remains owned by each component. The superbuild
@@ -64,6 +68,9 @@ options, generated files, and test tree.
 - A generated activation script contains only paths needed after installation.
 - CMake source subdirectories and a small Node-project adapter cover Studio
   without turning the entire workspace into one CMake target namespace.
+- A Node module may name a `SOURCE_PROVIDER` when its application and CMake
+  module share one repository. This makes source ownership explicit without
+  creating competing clone steps.
 - The Node adapter hashes `package.json` and `package-lock.json`, running
   `npm ci` only when those inputs or `node_modules` change.
 - Command-line OOT projects build by default; their CTest trees are registered
@@ -72,6 +79,11 @@ options, generated files, and test tree.
   build graph and can be added independently if they prove necessary.
 
 ## Tradeoffs
+
+The manifest is deliberately ordered rather than topologically sorted.
+Dependencies must be declared before consumers; configuration validates this
+and reports forward dependencies. The resulting file remains readable as the
+actual build sequence and avoids a separate graph implementation.
 
 `ExternalProject` does not model individual source files in the outer build.
 `BUILD_ALWAYS` therefore asks each inner CMake build to run on every outer

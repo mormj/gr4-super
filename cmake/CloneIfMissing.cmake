@@ -4,9 +4,15 @@ foreach(required_variable GIT_EXECUTABLE SOURCE_DIR SOURCE_MARKER GIT_REPOSITORY
   endif()
 endforeach()
 
-if(EXISTS "${SOURCE_DIR}/.git" OR EXISTS "${SOURCE_DIR}/${SOURCE_MARKER}")
+if(EXISTS "${SOURCE_DIR}/${SOURCE_MARKER}")
   message(STATUS "Using existing source: ${SOURCE_DIR}")
   return()
+endif()
+
+if(EXISTS "${SOURCE_DIR}/.git")
+  message(FATAL_ERROR
+    "Existing Git checkout is missing expected source marker "
+    "'${SOURCE_MARKER}': ${SOURCE_DIR}")
 endif()
 
 if(EXISTS "${SOURCE_DIR}")
@@ -32,6 +38,9 @@ function(run_git)
     RESULT_VARIABLE result
     ERROR_VARIABLE error)
   if(NOT result EQUAL 0)
+    if(DEFINED staging_dir AND EXISTS "${staging_dir}")
+      file(REMOVE_RECURSE "${staging_dir}")
+    endif()
     message(FATAL_ERROR "Git command failed (${result}): ${error}")
   endif()
 endfunction()

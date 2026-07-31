@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.27)
 project(gr4-super NONE)
 
 include(ExternalProject)
+include(cmake/ModuleRegistry.cmake)
 find_package(Git REQUIRED)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -20,73 +21,39 @@ set(GR4_EXTRA_PROJECTS
 set(GR4_EXTRA_CMAKE_ARGS
     ""
     CACHE STRING "Additional CMake arguments passed to every project")
-set(GR4_CORE_CMAKE_ARGS
+set(GR4_MODULE_GROUPS
+    "base"
+    CACHE STRING "Semicolon-separated module groups to build")
+set(GR4_MODULES
     ""
-    CACHE STRING "Additional CMake arguments passed only to gnuradio4-core")
-set(GR4_LIBRARY_CMAKE_ARGS
+    CACHE STRING "Additional registered modules to build")
+set(GR4_EXCLUDE_MODULES
     ""
-    CACHE STRING "Additional CMake arguments passed only to gnuradio4-library")
-set(GR4_BLOCKS_CMAKE_ARGS
-    ""
-    CACHE STRING "Additional CMake arguments passed only to gnuradio4-blocks")
-set(GR4_INCUBATOR_CMAKE_ARGS
-    ""
-    CACHE STRING "Additional CMake arguments passed only to gr4-incubator")
-set(GR4_CONTROL_PLANE_CMAKE_ARGS
-    ""
-    CACHE STRING "Additional CMake arguments passed only to gnuradio4-control-plane")
-set(GR4_STUDIO_BLOCKS_CMAKE_ARGS
-    ""
-    CACHE STRING "Additional CMake arguments passed only to the Studio blocks project")
+    CACHE STRING "Registered modules to exclude from the selected groups")
 set(CMAKE_INSTALL_LIBDIR
     "lib"
     CACHE STRING "Relative library installation directory shared by all child projects")
-set(GR4_CORE_REPOSITORY
-    "https://github.com/gnuradio/gnuradio4-core.git"
-    CACHE STRING "Git repository used when gnuradio4-core is missing")
-set(GR4_CORE_REF
-    "main"
-    CACHE STRING "Git branch, tag, or commit used when cloning gnuradio4-core")
-set(GR4_LIBRARY_REPOSITORY
-    "https://github.com/gnuradio/gnuradio4-library.git"
-    CACHE STRING "Git repository used when gnuradio4-library is missing")
-set(GR4_LIBRARY_REF
-    "main"
-    CACHE STRING "Git branch, tag, or commit used when cloning gnuradio4-library")
-set(GR4_BLOCKS_REPOSITORY
-    "https://github.com/gnuradio/gnuradio4-blocks.git"
-    CACHE STRING "Git repository used when gnuradio4-blocks is missing")
-set(GR4_BLOCKS_REF
-    "main"
-    CACHE STRING "Git branch, tag, or commit used when cloning gnuradio4-blocks")
-set(GR4_INCUBATOR_REPOSITORY
-    "https://github.com/gnuradio/gr4-incubator.git"
-    CACHE STRING "Git repository used when gr4-incubator is missing")
-set(GR4_INCUBATOR_REF
-    "main"
-    CACHE STRING "Git branch, tag, or commit used when cloning gr4-incubator")
-set(GR4_CONTROL_PLANE_REPOSITORY
-    "https://github.com/gnuradio/gnuradio4-control-plane.git"
-    CACHE STRING "Git repository used when gnuradio4-control-plane is missing")
-set(GR4_CONTROL_PLANE_REF
-    "main"
-    CACHE STRING "Git branch, tag, or commit used when cloning gnuradio4-control-plane")
-set(GR4_STUDIO_REPOSITORY
-    "https://github.com/gnuradio/gnuradio4-studio.git"
-    CACHE STRING "Git repository used when gnuradio4-studio is missing")
-set(GR4_STUDIO_REF
-    "main"
-    CACHE STRING "Git branch, tag, or commit used when cloning gnuradio4-studio")
 
 option(GR4_BUILD_TESTING "Build tests in the child projects" ON)
 option(GR4_FETCH_DEPS "Allow child projects to fetch missing dependencies" ON)
 option(GR4_WARNINGS_AS_ERRORS "Build child projects with warnings as errors" ON)
 option(GR4_ADDRESS_SANITIZER "Build child projects with AddressSanitizer" OFF)
 option(GR4_UB_SANITIZER "Build child projects with UndefinedBehaviorSanitizer" OFF)
-option(GR4_ENABLE_INCUBATOR "Build and install the GNU Radio 4 incubator" OFF)
-option(GR4_ENABLE_CONTROL_PLANE "Build and install the GNU Radio 4 control plane" OFF)
-option(GR4_ENABLE_STUDIO "Build and install GNU Radio 4 Studio and its blocks" OFF)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+
+# Deprecated compatibility switches. ON still includes the corresponding
+# modules; OFF and empty defer to module selection so stale preset caches do
+# not override GR4_MODULE_GROUPS.
+foreach(legacy_option
+    GR4_ENABLE_INCUBATOR
+    GR4_ENABLE_CONTROL_PLANE
+    GR4_ENABLE_STUDIO)
+  set(
+    "${legacy_option}"
+    ""
+    CACHE STRING "Deprecated enable override; use GR4_MODULE_GROUPS or GR4_MODULES")
+  set_property(CACHE "${legacy_option}" PROPERTY STRINGS "" ON OFF)
+endforeach()
 
 cmake_path(IS_ABSOLUTE CMAKE_INSTALL_LIBDIR install_libdir_is_absolute)
 if(install_libdir_is_absolute)
@@ -219,7 +186,7 @@ endfunction()
 
 function(gr4_add_node_project name)
   set(options TESTS)
-  set(one_value_args SOURCE_DIR)
+  set(one_value_args SOURCE_DIR SOURCE_PROVIDER GIT_REPOSITORY GIT_TAG)
   set(multi_value_args DEPENDS)
   cmake_parse_arguments(PROJECT "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
 
@@ -233,6 +200,38 @@ function(gr4_add_node_project name)
   find_program(NPM_EXECUTABLE npm REQUIRED)
   cmake_path(ABSOLUTE_PATH PROJECT_SOURCE_DIR BASE_DIRECTORY "${CMAKE_SOURCE_DIR}" NORMALIZE)
 
+  if(EXISTS "${PROJECT_SOURCE_DIR}/package.json")
+    set(download_args
+        DOWNLOAD_COMMAND ""
+        UPDATE_COMMAND ""
+        PATCH_COMMAND "")
+  elseif(PROJECT_GIT_REPOSITORY)
+    if(NOT PROJECT_GIT_TAG)
+      set(PROJECT_GIT_TAG main)
+    endif()
+    set(download_args
+        DOWNLOAD_COMMAND
+          "${CMAKE_COMMAND}"
+          "-DGIT_EXECUTABLE:FILEPATH=${GIT_EXECUTABLE}"
+          "-DSOURCE_DIR:PATH=<SOURCE_DIR>"
+          "-DSOURCE_MARKER:STRING=package.json"
+          "-DGIT_REPOSITORY:STRING=${PROJECT_GIT_REPOSITORY}"
+          "-DGIT_TAG:STRING=${PROJECT_GIT_TAG}"
+          -P "${CMAKE_SOURCE_DIR}/cmake/CloneIfMissing.cmake"
+        UPDATE_COMMAND ""
+        PATCH_COMMAND "")
+  elseif(PROJECT_SOURCE_PROVIDER)
+    # The provider owns and populates a repository shared with this project.
+    set(download_args
+        DOWNLOAD_COMMAND "${CMAKE_COMMAND}" -E true
+        UPDATE_COMMAND ""
+        PATCH_COMMAND "")
+  else()
+    message(FATAL_ERROR
+      "Missing ${PROJECT_SOURCE_DIR}/package.json for '${name}'; provide "
+      "GIT_REPOSITORY or SOURCE_PROVIDER")
+  endif()
+
   set(node_stamp_dir "${CMAKE_BINARY_DIR}/stamp/${name}")
   set(node_environment
       "${CMAKE_COMMAND}" -E env
@@ -244,11 +243,9 @@ function(gr4_add_node_project name)
 
   ExternalProject_Add(
     "${name}"
+    ${download_args}
     SOURCE_DIR "${PROJECT_SOURCE_DIR}"
     STAMP_DIR "${node_stamp_dir}"
-    DOWNLOAD_COMMAND ""
-    UPDATE_COMMAND ""
-    PATCH_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_COMMAND
       "${CMAKE_COMMAND}"
@@ -262,6 +259,7 @@ function(gr4_add_node_project name)
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE TRUE
     BUILD_ALWAYS TRUE
+    STEP_TARGETS download
     DEPENDS ${PROJECT_DEPENDS}
     EXCLUDE_FROM_ALL TRUE
     USES_TERMINAL_CONFIGURE TRUE
@@ -273,6 +271,7 @@ function(gr4_add_node_project name)
     COMMENT "Removing ${name}'s superbuild state")
 
   set_property(GLOBAL APPEND PROPERTY GR4_PROJECT_TARGETS "${name}")
+  set_property(GLOBAL APPEND PROPERTY GR4_SOURCE_TARGETS "${name}-download")
 
   if(PROJECT_TESTS AND GR4_BUILD_TESTING)
     add_custom_target(
@@ -290,98 +289,32 @@ function(gr4_add_node_project name)
   endif()
 endfunction()
 
-gr4_add_project(
-  gnuradio4-core
-  SOURCE_DIR "${GR4_SOURCE_ROOT}/gnuradio4-core"
-  GIT_REPOSITORY "${GR4_CORE_REPOSITORY}"
-  GIT_TAG "${GR4_CORE_REF}"
-  CMAKE_ARGS ${GR4_CORE_CMAKE_ARGS}
-  TESTS)
+include("${CMAKE_SOURCE_DIR}/modules.cmake")
 
-gr4_add_project(
-  gnuradio4-library
-  SOURCE_DIR "${GR4_SOURCE_ROOT}/gnuradio4-library"
-  GIT_REPOSITORY "${GR4_LIBRARY_REPOSITORY}"
-  GIT_TAG "${GR4_LIBRARY_REF}"
-  DEPENDS gnuradio4-core
-  CMAKE_ARGS ${GR4_LIBRARY_CMAKE_ARGS}
-  TESTS)
+# Local manifests use the same registration API as the checked-in manifest.
+# The file is ignored by git.
+include("${CMAKE_SOURCE_DIR}/projects.local.cmake" OPTIONAL)
 
-gr4_add_project(
-  gnuradio4-blocks
-  SOURCE_DIR "${GR4_SOURCE_ROOT}/gnuradio4-blocks"
-  GIT_REPOSITORY "${GR4_BLOCKS_REPOSITORY}"
-  GIT_TAG "${GR4_BLOCKS_REF}"
-  DEPENDS gnuradio4-library
-  CMAKE_ARGS ${GR4_BLOCKS_CMAKE_ARGS}
-  TESTS)
+# For the common one-off case, paths may also be supplied directly. These
+# modules retain the historical dependency on the installed blocks SDK.
+foreach(source_dir IN LISTS GR4_EXTRA_PROJECTS)
+  cmake_path(ABSOLUTE_PATH source_dir BASE_DIRECTORY "${CMAKE_SOURCE_DIR}" NORMALIZE)
+  cmake_path(GET source_dir FILENAME project_name)
+  gr4_register_module(
+    NAME "${project_name}"
+    TYPE CMAKE
+    SOURCE_DIR "${source_dir}"
+    DEPENDS gnuradio4-blocks)
+  list(APPEND GR4_MODULES "${project_name}")
+endforeach()
 
-if(GR4_ENABLE_INCUBATOR)
-  gr4_add_project(
-    gr4-incubator
-    SOURCE_DIR "${GR4_SOURCE_ROOT}/gr4-incubator"
-    GIT_REPOSITORY "${GR4_INCUBATOR_REPOSITORY}"
-    GIT_TAG "${GR4_INCUBATOR_REF}"
-    DEPENDS gnuradio4-blocks
-    CMAKE_ARGS ${GR4_INCUBATOR_CMAKE_ARGS}
-    TESTS)
-endif()
+gr4_realize_modules()
 
-if(GR4_ENABLE_CONTROL_PLANE)
-  gr4_add_project(
-    gnuradio4-control-plane
-    SOURCE_DIR "${GR4_SOURCE_ROOT}/gnuradio4-control-plane"
-    GIT_REPOSITORY "${GR4_CONTROL_PLANE_REPOSITORY}"
-    GIT_TAG "${GR4_CONTROL_PLANE_REF}"
-    DEPENDS gnuradio4-blocks
-    CMAKE_ARGS ${GR4_CONTROL_PLANE_CMAKE_ARGS}
-    TESTS)
-endif()
-
-if(GR4_ENABLE_STUDIO)
-  gr4_add_project(
-    gnuradio4-studio-blocks
-    SOURCE_DIR "${GR4_SOURCE_ROOT}/gnuradio4-studio"
-    SOURCE_SUBDIR blocks
-    GIT_REPOSITORY "${GR4_STUDIO_REPOSITORY}"
-    GIT_TAG "${GR4_STUDIO_REF}"
-    DEPENDS gnuradio4-blocks
-    CMAKE_ARGS
-      "-DCMAKE_CXX_FLAGS_INIT:STRING=-D_GLIBCXX_USE_TBB_PAR_BACKEND=0"
-      "-DCMAKE_PROJECT_INCLUDE:FILEPATH=${CMAKE_SOURCE_DIR}/cmake/EnableTesting.cmake"
-      ${GR4_STUDIO_BLOCKS_CMAKE_ARGS}
-    TESTS)
-
-  set(studio_dependencies gnuradio4-studio-blocks)
-  if(GR4_ENABLE_CONTROL_PLANE)
-    list(APPEND studio_dependencies gnuradio4-control-plane)
-  endif()
-
-  gr4_add_node_project(
-    gnuradio4-studio
-    SOURCE_DIR "${GR4_SOURCE_ROOT}/gnuradio4-studio"
-    DEPENDS ${studio_dependencies}
-    TESTS)
-
+if("gnuradio4-studio" IN_LIST GR4_SELECTED_MODULES)
   set(GR4_STUDIO_SOURCE_DIR "${GR4_SOURCE_ROOT}/gnuradio4-studio")
 else()
   set(GR4_STUDIO_SOURCE_DIR "")
 endif()
-
-# A local file is the convenient place for named projects and custom dependency
-# relationships. It is ignored by git.
-include("${CMAKE_SOURCE_DIR}/projects.local.cmake" OPTIONAL)
-
-# For the common case, paths may also be supplied directly at configure time.
-# Extra projects are assumed to consume the complete first-party stack.
-foreach(source_dir IN LISTS GR4_EXTRA_PROJECTS)
-  cmake_path(ABSOLUTE_PATH source_dir BASE_DIRECTORY "${CMAKE_SOURCE_DIR}" NORMALIZE)
-  cmake_path(GET source_dir FILENAME project_name)
-  gr4_add_project(
-    "${project_name}"
-    SOURCE_DIR "${source_dir}"
-    DEPENDS gnuradio4-blocks)
-endforeach()
 
 get_property(project_targets GLOBAL PROPERTY GR4_PROJECT_TARGETS)
 get_property(source_targets GLOBAL PROPERTY GR4_SOURCE_TARGETS)
@@ -391,33 +324,37 @@ get_property(test_targets GLOBAL PROPERTY GR4_TEST_TARGETS)
 add_custom_target(gr4 ALL DEPENDS ${project_targets})
 add_custom_target(sources DEPENDS ${source_targets})
 
-set(smoke_binary_dir "${CMAKE_BINARY_DIR}/tests/oot-smoke")
-set(smoke_cmake_args
-    "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}"
-    "-DCMAKE_PREFIX_PATH:PATH=${CMAKE_INSTALL_PREFIX}")
-foreach(variable CMAKE_C_COMPILER CMAKE_CXX_COMPILER CMAKE_TOOLCHAIN_FILE)
-  if(DEFINED ${variable} AND NOT "${${variable}}" STREQUAL "")
-    list(APPEND smoke_cmake_args "-D${variable}:FILEPATH=${${variable}}")
-  endif()
-endforeach()
+set(integration_test_targets "")
+if("gnuradio4-blocks" IN_LIST GR4_SELECTED_MODULES)
+  set(smoke_binary_dir "${CMAKE_BINARY_DIR}/tests/oot-smoke")
+  set(smoke_cmake_args
+      "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}"
+      "-DCMAKE_PREFIX_PATH:PATH=${CMAKE_INSTALL_PREFIX}")
+  foreach(variable CMAKE_C_COMPILER CMAKE_CXX_COMPILER CMAKE_TOOLCHAIN_FILE)
+    if(DEFINED ${variable} AND NOT "${${variable}}" STREQUAL "")
+      list(APPEND smoke_cmake_args "-D${variable}:FILEPATH=${${variable}}")
+    endif()
+  endforeach()
 
-add_custom_target(
-  oot-smoke
-  COMMAND
-    "${CMAKE_COMMAND}"
-    -S "${CMAKE_SOURCE_DIR}/tests/oot-smoke"
-    -B "${smoke_binary_dir}"
-    -G "${CMAKE_GENERATOR}"
-    ${smoke_cmake_args}
-  COMMAND "${CMAKE_COMMAND}" --build "${smoke_binary_dir}"
-  COMMAND
-    "${CMAKE_CTEST_COMMAND}"
-    --test-dir "${smoke_binary_dir}"
-    --output-on-failure
-    --no-tests=error
-  DEPENDS gnuradio4-blocks
-  USES_TERMINAL
-  COMMENT "Building and testing an out-of-tree consumer against the installed GNU Radio 4 SDK")
+  add_custom_target(
+    oot-smoke
+    COMMAND
+      "${CMAKE_COMMAND}"
+      -S "${CMAKE_SOURCE_DIR}/tests/oot-smoke"
+      -B "${smoke_binary_dir}"
+      -G "${CMAKE_GENERATOR}"
+      ${smoke_cmake_args}
+    COMMAND "${CMAKE_COMMAND}" --build "${smoke_binary_dir}"
+    COMMAND
+      "${CMAKE_CTEST_COMMAND}"
+      --test-dir "${smoke_binary_dir}"
+      --output-on-failure
+      --no-tests=error
+    DEPENDS gnuradio4-blocks
+    USES_TERMINAL
+    COMMENT "Building and testing an out-of-tree consumer against the installed GNU Radio 4 SDK")
+  list(APPEND integration_test_targets oot-smoke)
+endif()
 
 set(check_commands "")
 set(check_environment
@@ -437,12 +374,18 @@ foreach(test_dir IN LISTS ctest_dirs)
       --no-tests=error)
 endforeach()
 
-add_custom_target(
-  check
-  ${check_commands}
-  DEPENDS oot-smoke ${test_targets}
-  USES_TERMINAL
-  COMMENT "Running GNU Radio 4 component and installed-SDK integration tests")
+if(check_commands)
+  add_custom_target(
+    check
+    ${check_commands}
+    DEPENDS ${integration_test_targets} ${test_targets}
+    USES_TERMINAL
+    COMMENT "Running GNU Radio 4 component and installed-SDK integration tests")
+else()
+  add_custom_target(
+    check
+    DEPENDS ${integration_test_targets} ${test_targets})
+endif()
 
 configure_file(
   "${CMAKE_SOURCE_DIR}/cmake/activate.sh.in"
@@ -451,5 +394,5 @@ configure_file(
 
 message(STATUS "GNU Radio 4 sources: ${GR4_SOURCE_ROOT}")
 message(STATUS "Shared install prefix: ${CMAKE_INSTALL_PREFIX}")
-message(STATUS "Projects: ${project_targets}")
+message(STATUS "Modules: ${GR4_SELECTED_MODULES}")
 message(STATUS "After building: source ${CMAKE_BINARY_DIR}/activate.sh")

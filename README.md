@@ -122,7 +122,7 @@ dependency order. All three components are available through the aggregate
 | `asan` | Debug, tests, AddressSanitizer | Memory-error diagnostics | `install/asan/` |
 | `ubsan` | Debug, tests, UndefinedBehaviorSanitizer | Undefined-behavior diagnostics | `install/ubsan/` |
 | `offline` | RelWithAssert, tests, system dependencies | Build without dependency downloads | `install/offline/` |
-| `ci` | RelWithAssert, tests, warnings as errors | Reproducible CI builds | `install/ci/` |
+| `ci` | RelWithAssert, tests, warnings as errors | Base-stack integration CI | `install/ci/` |
 | `full` | RelWithAssert, tests, incubator, control-plane, Studio | Complete application development | `install/full/` |
 | `full-ci` | RelWithAssert, tests, incubator, control-plane, Studio | Complete integration CI | `install/full-ci/` |
 
@@ -157,6 +157,7 @@ personal build choices are not committed accidentally. For example:
       "binaryDir": "${sourceDir}/build/my-radio",
       "cacheVariables": {
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/my-radio",
+        "GR4_MODULE_GROUPS": "base;experimental",
         "GR4_BLOCKS_CMAKE_ARGS": "-DENABLE_EXAMPLES=OFF"
       }
     }
@@ -184,6 +185,99 @@ Curated top-level options cover cross-workspace choices. The component-specific
 project. These variables can use only options already exposed by that
 repository. For example, the current blocks project provides opt-in audio and
 SDR options, but its standard block modules are built unconditionally.
+
+### Select workspace modules
+
+The checked-in [`modules.cmake`](modules.cmake) manifest declares repositories,
+dependencies, build adapters, tests, and membership in named module groups:
+
+| Group | Modules |
+| --- | --- |
+| `base` | core, library, blocks |
+| `full` | incubator, control-plane, Studio |
+| `experimental` | incubator |
+| `applications` | control-plane, Studio |
+
+Select groups, add individual registered modules, or remove optional modules:
+
+```sh
+# Core stack plus incubator
+cmake --preset dev -DGR4_MODULE_GROUPS="base;experimental"
+
+# Add one registered module and its required dependencies
+cmake --preset dev -DGR4_MODULES=gr4-incubator
+
+# Full profile without incubator
+cmake --preset full -DGR4_EXCLUDE_MODULES=gr4-incubator
+```
+
+Required dependencies are selected automatically. Excluding a required
+dependency is an error rather than producing a partial build.
+The earlier `GR4_ENABLE_INCUBATOR`, `GR4_ENABLE_CONTROL_PLANE`, and
+`GR4_ENABLE_STUDIO` switches still include their modules when set to `ON`.
+Their old `OFF` defaults defer to module selection; new profiles should use
+`GR4_EXCLUDE_MODULES` to disable modules.
+
+To add a repository to the shared workspace later, append one ordered
+declaration to `modules.cmake`:
+
+```cmake
+gr4_register_module(
+  NAME gr4-radio-astronomy
+  TYPE CMAKE
+  SOURCE_DIR gr4-radio-astronomy
+  SOURCE_KEY RADIO_ASTRONOMY
+  OPTIONS_KEY RADIO_ASTRONOMY
+  REPOSITORY https://github.com/example/gr4-radio-astronomy.git
+  REF main
+  GROUPS full
+  DEPENDS gnuradio4-blocks
+  TESTS)
+```
+
+That declaration creates the build, download, clean, aggregate, and test
+integration along with `GR4_RADIO_ASTRONOMY_REPOSITORY`,
+`GR4_RADIO_ASTRONOMY_REF`, and `GR4_RADIO_ASTRONOMY_CMAKE_ARGS` cache
+variables. Keep declarations after their required dependencies. `TYPE CMAKE`
+and `TYPE NODE` use the existing generic adapters; `SOURCE_SUBDIR` covers a
+CMake project below a repository root.
+
+#### Module declaration reference
+
+`modules.cmake` is the checked-in workspace manifest.
+`projects.local.cmake` is its ignored, machine-local extension. Both accept the
+same `gr4_register_module()` arguments:
+
+| Argument | Meaning |
+| --- | --- |
+| `NAME` | Required unique target and module name |
+| `TYPE` | `CMAKE` by default, or `NODE` |
+| `SOURCE_DIR` | Source path; relative paths are resolved below `GR4_SOURCE_ROOT` |
+| `SOURCE_SUBDIR` | CMake project directory below the repository root |
+| `REPOSITORY` | Git URL used only when the source is missing |
+| `REF` | Branch, tag, or commit to clone; defaults to `main` |
+| `SOURCE_KEY` | Cache-variable stem for `REPOSITORY` and `REF` overrides |
+| `OPTIONS_KEY` | Cache-variable stem for component-specific CMake arguments |
+| `GROUPS` | Named groups that select this module |
+| `DEPENDS` | Required registered modules, selected automatically |
+| `OPTIONAL_DEPENDS` | Dependencies used only when independently selected |
+| `SOURCE_PROVIDER` | For `NODE`, a required module that populates a shared repository |
+| `CMAKE_ARGS` | Fixed additional arguments for a `CMAKE` child |
+| `TESTS` | Register the child tests with the top-level `check` target |
+
+Declarations are ordered: dependencies and source providers must appear before
+their consumers. Configuration rejects unknown arguments, missing values,
+unknown modules, invalid cache keys, self-dependencies, forward dependencies
+(including cycles), and attempts to exclude a required dependency.
+`SOURCE_PROVIDER` and `REPOSITORY` are mutually exclusive; Node-specific build
+customization belongs in that repository's package scripts rather than
+`CMAKE_ARGS`.
+
+An existing checkout is always developer-owned. The superbuild uses it without
+fetching or switching revisions when its expected source marker is present. A
+missing source is cloned at the configured ref into a detached checkout; a
+non-empty or malformed destination is never replaced. Failed clones remove
+their private staging directory so a later build can retry cleanly.
 
 ### Build individual components
 
@@ -218,7 +312,7 @@ lib/                         # GNU Radio and Studio plugins
 share/gr4-studio/            # frontend and desktop assets
 ```
 
-Application targets can also be built individually:
+Full-profile targets can also be built individually:
 
 ```sh
 cmake --build --preset full --target gnuradio4-control-plane
@@ -232,13 +326,19 @@ bundle, and installs it into the profile prefix. The dependency installation is
 repeated automatically when `package.json` or `package-lock.json` changes. Its
 build depends on both the Studio blocks and control-plane in the `full` preset.
 
-Incubator, control-plane, and Studio can be enabled independently without using
-the preset:
+The Studio blocks declaration currently carries two compatibility arguments in
+`modules.cmake`: it disables the libstdc++ TBB parallel backend for the current
+toolchain combination and injects top-level CTest enablement through
+`cmake/EnableTesting.cmake`. They are intentionally isolated in the manifest
+and should be removed when the Studio project no longer requires them.
+
+Incubator, control-plane, and Studio can be selected independently without
+using the preset:
 
 ```sh
-cmake --preset dev -DGR4_ENABLE_INCUBATOR=ON
-cmake --preset dev -DGR4_ENABLE_CONTROL_PLANE=ON
-cmake --preset dev -DGR4_ENABLE_STUDIO=ON
+cmake --preset dev -DGR4_MODULES=gr4-incubator
+cmake --preset dev -DGR4_MODULES=gnuradio4-control-plane
+cmake --preset dev -DGR4_MODULES=gnuradio4-studio
 ```
 
 Studio without control-plane supports remote-backend use; enable both for the
@@ -253,7 +353,7 @@ cmake --build --preset dev --target sources
 Use `--preset full` to clone the incubator, control-plane, and Studio sources
 as well.
 
-Build the complete stack and run all component and installed-SDK tests:
+Build the selected stack and run all component and installed-SDK tests:
 
 ```sh
 cmake --build --preset dev --target check
@@ -312,14 +412,16 @@ cmake --preset dev -DGR4_SOURCE_ROOT=/path/to/sources
 cmake --build --preset dev
 ```
 
-The source root must contain:
+The source root uses this layout; selected repositories that are missing are
+cloned into it:
 
 ```text
 gnuradio4-core/
 gnuradio4-library/
 gnuradio4-blocks/
-gnuradio4-control-plane/     # when enabled
-gnuradio4-studio/            # when enabled
+gr4-incubator/               # when selected
+gnuradio4-control-plane/     # when selected
+gnuradio4-studio/            # when selected
 ```
 
 The generated `activate.sh` adds the selected install prefix to the executable,
@@ -336,27 +438,31 @@ cmake --preset dev -DGR4_EXTRA_PROJECTS=/path/to/gr4-example
 cmake --build --preset dev --target gr4-example
 ```
 
-Extra projects registered this way depend on the complete first-party stack.
+Extra projects registered this way depend on the base core/library/blocks stack.
 They are built by the aggregate target but are not assumed to provide CTest
 tests.
 
-For multiple projects or custom dependency relationships, copy
+For repositories, tests, or custom dependency relationships that should persist
+in local profiles, copy
 `projects.local.cmake.example` to the ignored `projects.local.cmake` file and
-declare each project explicitly:
+register each module:
 
 ```cmake
-gr4_add_project(
-  my-gr4-module
-  SOURCE_DIR "../my-gr4-module"
+gr4_register_module(
+  NAME my-gr4-module
+  TYPE CMAKE
+  SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../my-gr4-module"
   DEPENDS gnuradio4-blocks
   CMAKE_ARGS
     "-DENABLE_PLUGINS:BOOL=ON"
   TESTS)
 ```
 
-`TESTS` registers the project's child CTest tree with the top-level `check`
-target and requires that tree to contain at least one test. Use the explicit
-form for an OOT project whose tests should participate in `check`.
+Select it with `-DGR4_MODULES=my-gr4-module`, or assign it to a group with the
+registration's `GROUPS` argument. `TESTS` registers the module's child CTest
+tree with the top-level `check` target and requires that tree to contain at
+least one test.
+
 Project-specific configuration belongs in its `CMAKE_ARGS` list. Options that
 should apply to every component may be supplied through `GR4_EXTRA_CMAKE_ARGS`:
 
@@ -370,6 +476,9 @@ cmake --preset dev \
 | Option | Default | Description |
 | --- | ---: | --- |
 | `GR4_SOURCE_ROOT` | `src/` | Location of the first-party source repositories |
+| `GR4_MODULE_GROUPS` | `base` | Registered module groups to build |
+| `GR4_MODULES` | empty | Additional registered modules to build |
+| `GR4_EXCLUDE_MODULES` | empty | Registered modules to remove from selected groups |
 | `GR4_EXTRA_PROJECTS` | empty | Additional CMake project paths |
 | `GR4_EXTRA_CMAKE_ARGS` | empty | Additional CMake arguments for every child project |
 | `GR4_CORE_CMAKE_ARGS` | empty | Additional arguments for core only |
@@ -390,9 +499,6 @@ cmake --preset dev \
 | `GR4_CONTROL_PLANE_REF` | `main` | Control-plane branch, tag, or commit |
 | `GR4_STUDIO_REPOSITORY` | GNU Radio GitHub repository | Studio clone source |
 | `GR4_STUDIO_REF` | `main` | Studio branch, tag, or commit |
-| `GR4_ENABLE_INCUBATOR` | `OFF` | Build and install incubator |
-| `GR4_ENABLE_CONTROL_PLANE` | `OFF` | Build and install control-plane |
-| `GR4_ENABLE_STUDIO` | `OFF` | Build and install Studio blocks and application |
 | `GR4_BUILD_TESTING` | `ON` | Build tests in child projects |
 | `GR4_FETCH_DEPS` | `ON` | Allow child projects to fetch selected dependencies |
 | `GR4_WARNINGS_AS_ERRORS` | `ON` | Treat child-project warnings as errors |
@@ -431,9 +537,19 @@ and consumption by an out-of-tree project.
 
 In addition to pushes and pull requests, a daily scheduled run builds the
 latest default revisions to detect compatibility drift between repositories.
-Manual workflow runs accept repository and revision overrides for all six
-components. This supports coordinated changes across repositories and testing
-branches from forks without changing the checked-in defaults.
+Manual runs accept one `cmake_options` value containing space-separated `-D`
+overrides, so newly registered modules do not require workflow changes:
+
+```sh
+gh workflow run ci.yml \
+  -f cmake_options="-DGR4_INCUBATOR_REPOSITORY=https://github.com/me/gr4-incubator.git -DGR4_INCUBATOR_REF=my-branch"
+```
+
+This supports coordinated changes and testing branches from forks without
+hardcoding every repository into the workflow interface. Each override must be
+one shell word; values containing spaces are not supported by this convenience
+input. The default CI run intentionally follows each module's configured
+revision—currently `main`—to detect cross-repository compatibility drift.
 
 ## Helpful Links
 
