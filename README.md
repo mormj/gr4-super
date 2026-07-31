@@ -299,6 +299,7 @@ plugins, and the Node/Vite desktop application:
 cmake --preset full
 cmake --build --preset full
 source build/full/activate.sh
+gr4-studio-sandbox-setup # one-time setup on Ubuntu/AppArmor hosts
 gr4-studio
 ```
 
@@ -308,7 +309,7 @@ The build installs the following into `install/full/`:
 bin/gr4cp_server
 bin/gr4cp-cli
 bin/gr4-studio
-lib/                         # GNU Radio and Studio plugins
+lib/                         # GNU Radio, control-plane, and Studio libraries/plugins
 share/gr4-studio/            # frontend and desktop assets
 ```
 
@@ -322,9 +323,32 @@ cmake --build --preset full --target gnuradio4-studio
 ```
 
 `gnuradio4-studio` installs its locked npm dependencies, builds the desktop
-bundle, and installs it into the profile prefix. The dependency installation is
-repeated automatically when `package.json` or `package-lock.json` changes. Its
-build depends on both the Studio blocks and control-plane in the `full` preset.
+bundle, and installs it with a pinned Electron runtime into the profile prefix.
+The launcher never downloads an ad hoc Electron release through `npx`. The
+dependency installation is repeated automatically when `package.json` or
+`package-lock.json` changes. Its build depends on both the Studio blocks and
+control-plane in the `full` preset.
+
+For a local launch, Studio treats the block catalog as the readiness boundary:
+the startup screen remains in place until `GET /blocks` returns a valid catalog.
+If `gr4cp_server` exits during startup, the launcher stops and prints the
+backend log instead of opening an unusable canvas. Each run reserves an
+available loopback port and passes that exact endpoint to Studio; local mode
+does not require port 8080 to be free.
+
+Ubuntu releases that restrict unprivileged user namespaces through AppArmor
+need a one-time profile installation after the first Studio build:
+
+```sh
+source build/full/activate.sh
+gr4-studio-sandbox-setup
+```
+
+The setup command installs a path-specific AppArmor profile for the Electron
+runtime under the active prefix and therefore requests `sudo`. It remains valid
+across rebuilds at that prefix. Use `gr4-studio-sandbox-setup --remove` before
+permanently deleting or relocating the prefix. Hosts without AppArmor user
+namespace restrictions do not need to run the helper.
 
 The Studio blocks declaration currently carries two compatibility arguments in
 `modules.cmake`: it disables the libstdc++ TBB parallel backend for the current
