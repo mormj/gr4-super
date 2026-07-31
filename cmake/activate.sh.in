@@ -18,14 +18,6 @@ for _gr4_python_dir in "${_gr4_libdir}"/python*/site-packages "${_gr4_libdir}"/p
   fi
 done
 
-_gr4_studio_source="@GR4_STUDIO_SOURCE_DIR@"
-if [ -x "${_gr4_studio_source}/node_modules/.bin/electron" ]; then
-  export GR4_STUDIO_ELECTRON_BIN="${_gr4_studio_source}/node_modules/.bin/electron"
-else
-  unset GR4_STUDIO_ELECTRON_BIN
-fi
-
 unset _gr4_prefix
 unset _gr4_libdir
 unset _gr4_python_dir
-unset _gr4_studio_source

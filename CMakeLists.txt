@@ -310,12 +310,6 @@ endforeach()
 
 gr4_realize_modules()
 
-if("gnuradio4-studio" IN_LIST GR4_SELECTED_MODULES)
-  set(GR4_STUDIO_SOURCE_DIR "${GR4_SOURCE_ROOT}/gnuradio4-studio")
-else()
-  set(GR4_STUDIO_SOURCE_DIR "")
-endif()
-
 get_property(project_targets GLOBAL PROPERTY GR4_PROJECT_TARGETS)
 get_property(source_targets GLOBAL PROPERTY GR4_SOURCE_TARGETS)
 get_property(ctest_dirs GLOBAL PROPERTY GR4_CTEST_DIRS)
