@@ -15,6 +15,7 @@
         "GR4_FETCH_DEPS": "ON",
         "GR4_ADDRESS_SANITIZER": "OFF",
         "GR4_UB_SANITIZER": "OFF",
+        "GR4_ENABLE_INCUBATOR": "OFF",
         "GR4_ENABLE_CONTROL_PLANE": "OFF",
         "GR4_ENABLE_STUDIO": "OFF"
       }
@@ -104,6 +105,7 @@
       "binaryDir": "${sourceDir}/build/full",
       "cacheVariables": {
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/full",
+        "GR4_ENABLE_INCUBATOR": "ON",
         "GR4_ENABLE_CONTROL_PLANE": "ON",
         "GR4_ENABLE_STUDIO": "ON"
       }
@@ -115,6 +117,7 @@
       "binaryDir": "${sourceDir}/build/full-ci",
       "cacheVariables": {
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/full-ci",
+        "GR4_ENABLE_INCUBATOR": "ON",
         "GR4_ENABLE_CONTROL_PLANE": "ON",
         "GR4_ENABLE_STUDIO": "ON"
       }

@@ -34,6 +34,7 @@ gnuradio4-library
       v
 gnuradio4-blocks
       ├── out-of-tree projects
+      ├── gr4-incubator
       ├── gnuradio4-control-plane
       └── gnuradio4-studio blocks
                     |

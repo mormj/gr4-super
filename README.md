@@ -27,6 +27,7 @@ building the complete project:
 | `gnuradio4-core` | Runtime, scheduler, graph and block model, plugin infrastructure, and block-development SDK |
 | `gnuradio4-library` | Reusable DSP algorithms and supporting libraries |
 | `gnuradio4-blocks` | Standard GNU Radio 4 signal-processing blocks |
+| `gr4-incubator` | Optional staging area for experimental blocks, schedulers, and utilities |
 | `gnuradio4-control-plane` | Optional runtime and HTTP control service |
 | `gnuradio4-studio` | Optional Studio blocks and browser/desktop application |
 
@@ -41,6 +42,7 @@ gnuradio4-library
       v
 gnuradio4-blocks
       ├── out-of-tree projects
+      ├── gr4-incubator
       ├── gnuradio4-control-plane
       └── gnuradio4-studio blocks
                     |
@@ -121,8 +123,8 @@ dependency order. All three components are available through the aggregate
 | `ubsan` | Debug, tests, UndefinedBehaviorSanitizer | Undefined-behavior diagnostics | `install/ubsan/` |
 | `offline` | RelWithAssert, tests, system dependencies | Build without dependency downloads | `install/offline/` |
 | `ci` | RelWithAssert, tests, warnings as errors | Reproducible CI builds | `install/ci/` |
-| `full` | RelWithAssert, tests, control-plane, Studio | Complete application development | `install/full/` |
-| `full-ci` | RelWithAssert, tests, control-plane, Studio | Complete integration CI | `install/full-ci/` |
+| `full` | RelWithAssert, tests, incubator, control-plane, Studio | Complete application development | `install/full/` |
+| `full-ci` | RelWithAssert, tests, incubator, control-plane, Studio | Complete integration CI | `install/full-ci/` |
 
 Use the same preset name to configure, build, and activate a profile:
 
@@ -194,10 +196,10 @@ cmake --build --preset dev --target gnuradio4-library
 cmake --build --preset dev --target gnuradio4-blocks
 ```
 
-### Build control-plane and Studio
+### Build incubator, control-plane, and Studio
 
-The `full` preset adds control-plane, Studio's CMake block plugins, and the
-Node/Vite desktop application:
+The `full` preset adds gr4-incubator, control-plane, Studio's CMake block
+plugins, and the Node/Vite desktop application:
 
 ```sh
 cmake --preset full
@@ -220,6 +222,7 @@ Application targets can also be built individually:
 
 ```sh
 cmake --build --preset full --target gnuradio4-control-plane
+cmake --build --preset full --target gr4-incubator
 cmake --build --preset full --target gnuradio4-studio-blocks
 cmake --build --preset full --target gnuradio4-studio
 ```
@@ -229,9 +232,11 @@ bundle, and installs it into the profile prefix. The dependency installation is
 repeated automatically when `package.json` or `package-lock.json` changes. Its
 build depends on both the Studio blocks and control-plane in the `full` preset.
 
-Control-plane and Studio can be enabled independently without using the preset:
+Incubator, control-plane, and Studio can be enabled independently without using
+the preset:
 
 ```sh
+cmake --preset dev -DGR4_ENABLE_INCUBATOR=ON
 cmake --preset dev -DGR4_ENABLE_CONTROL_PLANE=ON
 cmake --preset dev -DGR4_ENABLE_STUDIO=ON
 ```
@@ -239,11 +244,14 @@ cmake --preset dev -DGR4_ENABLE_STUDIO=ON
 Studio without control-plane supports remote-backend use; enable both for the
 normal local desktop experience.
 
-Clone missing sources without compiling:
+Clone the normal profile's missing sources without compiling:
 
 ```sh
 cmake --build --preset dev --target sources
 ```
+
+Use `--preset full` to clone the incubator, control-plane, and Studio sources
+as well.
 
 Build the complete stack and run all component and installed-SDK tests:
 
@@ -273,9 +281,9 @@ ctest --test-dir build/dev/projects/gnuradio4-library --output-on-failure
 ctest --test-dir build/dev/projects/gnuradio4-blocks --output-on-failure
 ```
 
-With the `full` preset, `check` additionally runs control-plane CTest, Studio
-block CTest, and Studio's lint and Vitest commands. The `release` preset
-disables test builds. All other supplied presets enable them.
+With the `full` preset, `check` additionally runs incubator and control-plane
+CTest, Studio block CTest, and Studio's lint and Vitest commands. The `release`
+preset disables test builds. All other supplied presets enable them.
 
 The `check` target also builds and runs `tests/oot-smoke`, a small external
 consumer that discovers all three installed CMake packages. This verifies the
@@ -361,12 +369,13 @@ cmake --preset dev \
 
 | Option | Default | Description |
 | --- | ---: | --- |
-| `GR4_SOURCE_ROOT` | `src/` | Location of the three primary source repositories |
+| `GR4_SOURCE_ROOT` | `src/` | Location of the first-party source repositories |
 | `GR4_EXTRA_PROJECTS` | empty | Additional CMake project paths |
 | `GR4_EXTRA_CMAKE_ARGS` | empty | Additional CMake arguments for every child project |
 | `GR4_CORE_CMAKE_ARGS` | empty | Additional arguments for core only |
 | `GR4_LIBRARY_CMAKE_ARGS` | empty | Additional arguments for library only |
 | `GR4_BLOCKS_CMAKE_ARGS` | empty | Additional arguments for blocks only |
+| `GR4_INCUBATOR_CMAKE_ARGS` | empty | Additional arguments for incubator only |
 | `GR4_CONTROL_PLANE_CMAKE_ARGS` | empty | Additional arguments for control-plane only |
 | `GR4_STUDIO_BLOCKS_CMAKE_ARGS` | empty | Additional arguments for Studio blocks only |
 | `GR4_CORE_REPOSITORY` | GNU Radio GitHub repository | Core clone source |
@@ -375,10 +384,13 @@ cmake --preset dev \
 | `GR4_LIBRARY_REF` | `main` | Library branch, tag, or commit |
 | `GR4_BLOCKS_REPOSITORY` | GNU Radio GitHub repository | Blocks clone source |
 | `GR4_BLOCKS_REF` | `main` | Blocks branch, tag, or commit |
+| `GR4_INCUBATOR_REPOSITORY` | GNU Radio GitHub repository | Incubator clone source |
+| `GR4_INCUBATOR_REF` | `main` | Incubator branch, tag, or commit |
 | `GR4_CONTROL_PLANE_REPOSITORY` | GNU Radio GitHub repository | Control-plane clone source |
 | `GR4_CONTROL_PLANE_REF` | `main` | Control-plane branch, tag, or commit |
 | `GR4_STUDIO_REPOSITORY` | GNU Radio GitHub repository | Studio clone source |
 | `GR4_STUDIO_REF` | `main` | Studio branch, tag, or commit |
+| `GR4_ENABLE_INCUBATOR` | `OFF` | Build and install incubator |
 | `GR4_ENABLE_CONTROL_PLANE` | `OFF` | Build and install control-plane |
 | `GR4_ENABLE_STUDIO` | `OFF` | Build and install Studio blocks and application |
 | `GR4_BUILD_TESTING` | `ON` | Build tests in child projects |
@@ -414,12 +426,12 @@ cmake --build --preset full-ci --target check
 The component repositories retain responsibility for their larger compiler,
 platform, sanitizer, coverage, and WebAssembly matrices. This repository checks
 the contract between the components: ordered installation, package discovery,
-component tests, control-plane, Studio blocks, the Studio frontend, and
-consumption by an out-of-tree project.
+component tests, incubator, control-plane, Studio blocks, the Studio frontend,
+and consumption by an out-of-tree project.
 
 In addition to pushes and pull requests, a daily scheduled run builds the
 latest default revisions to detect compatibility drift between repositories.
-Manual workflow runs accept repository and revision overrides for all five
+Manual workflow runs accept repository and revision overrides for all six
 components. This supports coordinated changes across repositories and testing
 branches from forks without changing the checked-in defaults.
 

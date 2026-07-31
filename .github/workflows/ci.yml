@@ -32,6 +32,14 @@ on:
         description: gnuradio4-blocks branch, tag, or commit
         required: true
         default: main
+      incubator_repository:
+        description: gr4-incubator Git repository
+        required: true
+        default: https://github.com/gnuradio/gr4-incubator.git
+      incubator_ref:
+        description: gr4-incubator branch, tag, or commit
+        required: true
+        default: main
       control_plane_repository:
         description: gnuradio4-control-plane Git repository
         required: true
@@ -87,6 +95,8 @@ jobs:
           LIBRARY_REF: ${{ inputs.library_ref }}
           BLOCKS_REPOSITORY: ${{ inputs.blocks_repository }}
           BLOCKS_REF: ${{ inputs.blocks_ref }}
+          INCUBATOR_REPOSITORY: ${{ inputs.incubator_repository }}
+          INCUBATOR_REF: ${{ inputs.incubator_ref }}
           CONTROL_PLANE_REPOSITORY: ${{ inputs.control_plane_repository }}
           CONTROL_PLANE_REF: ${{ inputs.control_plane_ref }}
           STUDIO_REPOSITORY: ${{ inputs.studio_repository }}
@@ -99,6 +109,8 @@ jobs:
           [[ -n "${LIBRARY_REF}" ]] && cmake_args+=("-DGR4_LIBRARY_REF=${LIBRARY_REF}")
           [[ -n "${BLOCKS_REPOSITORY}" ]] && cmake_args+=("-DGR4_BLOCKS_REPOSITORY=${BLOCKS_REPOSITORY}")
           [[ -n "${BLOCKS_REF}" ]] && cmake_args+=("-DGR4_BLOCKS_REF=${BLOCKS_REF}")
+          [[ -n "${INCUBATOR_REPOSITORY}" ]] && cmake_args+=("-DGR4_INCUBATOR_REPOSITORY=${INCUBATOR_REPOSITORY}")
+          [[ -n "${INCUBATOR_REF}" ]] && cmake_args+=("-DGR4_INCUBATOR_REF=${INCUBATOR_REF}")
           [[ -n "${CONTROL_PLANE_REPOSITORY}" ]] && cmake_args+=("-DGR4_CONTROL_PLANE_REPOSITORY=${CONTROL_PLANE_REPOSITORY}")
           [[ -n "${CONTROL_PLANE_REF}" ]] && cmake_args+=("-DGR4_CONTROL_PLANE_REF=${CONTROL_PLANE_REF}")
           [[ -n "${STUDIO_REPOSITORY}" ]] && cmake_args+=("-DGR4_STUDIO_REPOSITORY=${STUDIO_REPOSITORY}")

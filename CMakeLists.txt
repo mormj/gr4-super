@@ -29,6 +29,9 @@ set(GR4_LIBRARY_CMAKE_ARGS
 set(GR4_BLOCKS_CMAKE_ARGS
     ""
     CACHE STRING "Additional CMake arguments passed only to gnuradio4-blocks")
+set(GR4_INCUBATOR_CMAKE_ARGS
+    ""
+    CACHE STRING "Additional CMake arguments passed only to gr4-incubator")
 set(GR4_CONTROL_PLANE_CMAKE_ARGS
     ""
     CACHE STRING "Additional CMake arguments passed only to gnuradio4-control-plane")
@@ -56,6 +59,12 @@ set(GR4_BLOCKS_REPOSITORY
 set(GR4_BLOCKS_REF
     "main"
     CACHE STRING "Git branch, tag, or commit used when cloning gnuradio4-blocks")
+set(GR4_INCUBATOR_REPOSITORY
+    "https://github.com/gnuradio/gr4-incubator.git"
+    CACHE STRING "Git repository used when gr4-incubator is missing")
+set(GR4_INCUBATOR_REF
+    "main"
+    CACHE STRING "Git branch, tag, or commit used when cloning gr4-incubator")
 set(GR4_CONTROL_PLANE_REPOSITORY
     "https://github.com/gnuradio/gnuradio4-control-plane.git"
     CACHE STRING "Git repository used when gnuradio4-control-plane is missing")
@@ -74,6 +83,7 @@ option(GR4_FETCH_DEPS "Allow child projects to fetch missing dependencies" ON)
 option(GR4_WARNINGS_AS_ERRORS "Build child projects with warnings as errors" ON)
 option(GR4_ADDRESS_SANITIZER "Build child projects with AddressSanitizer" OFF)
 option(GR4_UB_SANITIZER "Build child projects with UndefinedBehaviorSanitizer" OFF)
+option(GR4_ENABLE_INCUBATOR "Build and install the GNU Radio 4 incubator" OFF)
 option(GR4_ENABLE_CONTROL_PLANE "Build and install the GNU Radio 4 control plane" OFF)
 option(GR4_ENABLE_STUDIO "Build and install GNU Radio 4 Studio and its blocks" OFF)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
@@ -305,6 +315,17 @@ gr4_add_project(
   DEPENDS gnuradio4-library
   CMAKE_ARGS ${GR4_BLOCKS_CMAKE_ARGS}
   TESTS)
+
+if(GR4_ENABLE_INCUBATOR)
+  gr4_add_project(
+    gr4-incubator
+    SOURCE_DIR "${GR4_SOURCE_ROOT}/gr4-incubator"
+    GIT_REPOSITORY "${GR4_INCUBATOR_REPOSITORY}"
+    GIT_TAG "${GR4_INCUBATOR_REF}"
+    DEPENDS gnuradio4-blocks
+    CMAKE_ARGS ${GR4_INCUBATOR_CMAKE_ARGS}
+    TESTS)
+endif()
 
 if(GR4_ENABLE_CONTROL_PLANE)
   gr4_add_project(
