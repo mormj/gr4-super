@@ -1,0 +1,37 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "dev-mac",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build/dev-mac",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/dev-mac",
+        "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
+      }
+    },
+    {
+      "name": "full-mac",
+      "inherits": "full",
+      "binaryDir": "${sourceDir}/build/full-mac",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/full-mac",
+        "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev-mac",
+      "configurePreset": "dev-mac",
+      "jobs": 0
+    },
+    {
+      "name": "full-mac",
+      "configurePreset": "full-mac",
+      "jobs": 0
+    }
+  ]
+}

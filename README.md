@@ -112,6 +112,32 @@ The default build performs three independent configure/build/install cycles in
 dependency order. All three components are available through the aggregate
 `gr4` target, which is also the default target.
 
+### macOS with Homebrew
+
+Apple Clang supplied by the Command Line Tools may be too old for the C++23
+features used by GNU Radio 4. The tracked
+`CMakeUserPresets.json.mac.example` selects Homebrew LLVM and provides separate
+development and full-workspace profiles. It assumes an Apple Silicon Homebrew
+prefix (`/opt/homebrew`); on Intel Macs, replace `/opt/homebrew` with
+`/usr/local` in the copied file.
+
+```sh
+brew install cmake ninja llvm
+cp CMakeUserPresets.json.mac.example CMakeUserPresets.json
+
+cmake --preset dev-mac
+cmake --build --preset dev-mac
+source build/dev-mac/activate.sh
+```
+
+For the complete workspace, use `full-mac` in place of `dev-mac`. It also
+requires Node.js 22 and npm. If ccache cannot write to its cache directory,
+disable it for the build:
+
+```sh
+CCACHE_DISABLE=1 cmake --build --preset full-mac
+```
+
 ### Build profiles
 
 | Preset | Configuration | Intended use | Install prefix |
