@@ -3,3 +3,6 @@
 /src/
 /projects.local.cmake
 /CMakeUserPresets.json
+/node_modules/
+/package.json
+/package-lock.json
