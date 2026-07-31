@@ -319,7 +319,10 @@ cmake --build --preset dev --target gnuradio4-blocks
 ### Build incubator, control-plane, and Studio
 
 The `full` preset adds gr4-incubator, control-plane, Studio's CMake block
-plugins, and the Node/Vite desktop application:
+plugins, and the Node/Vite desktop application. It enables incubator's plugin
+build so its blocks and schedulers are installed and discoverable at runtime.
+Incubator keeps its standalone warning policy because plugin builds include
+third-party headers that may emit compiler warnings:
 
 ```sh
 cmake --preset full
