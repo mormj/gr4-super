@@ -1,0 +1,109 @@
+name: GNU Radio 4 integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      core_repository:
+        description: gnuradio4-core Git repository
+        required: true
+        default: https://github.com/gnuradio/gnuradio4-core.git
+      core_ref:
+        description: gnuradio4-core branch, tag, or commit
+        required: true
+        default: main
+      library_repository:
+        description: gnuradio4-library Git repository
+        required: true
+        default: https://github.com/gnuradio/gnuradio4-library.git
+      library_ref:
+        description: gnuradio4-library branch, tag, or commit
+        required: true
+        default: main
+      blocks_repository:
+        description: gnuradio4-blocks Git repository
+        required: true
+        default: https://github.com/gnuradio/gnuradio4-blocks.git
+      blocks_ref:
+        description: gnuradio4-blocks branch, tag, or commit
+        required: true
+        default: main
+      control_plane_repository:
+        description: gnuradio4-control-plane Git repository
+        required: true
+        default: https://github.com/gnuradio/gnuradio4-control-plane.git
+      control_plane_ref:
+        description: gnuradio4-control-plane branch, tag, or commit
+        required: true
+        default: main
+      studio_repository:
+        description: gnuradio4-studio Git repository
+        required: true
+        default: https://github.com/gnuradio/gnuradio4-studio.git
+      studio_ref:
+        description: gnuradio4-studio branch, tag, or commit
+        required: true
+        default: main
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: Ubuntu 24.04 | GCC 14 | complete stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    container:
+      image: ghcr.io/gnuradio/ci:ubuntu-24.04-4.0
+
+    env:
+      CC: gcc-14
+      CXX: g++-14
+      DISABLE_SENSITIVE_TESTS: "1"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Configure
+        shell: bash
+        env:
+          CORE_REPOSITORY: ${{ inputs.core_repository }}
+          CORE_REF: ${{ inputs.core_ref }}
+          LIBRARY_REPOSITORY: ${{ inputs.library_repository }}
+          LIBRARY_REF: ${{ inputs.library_ref }}
+          BLOCKS_REPOSITORY: ${{ inputs.blocks_repository }}
+          BLOCKS_REF: ${{ inputs.blocks_ref }}
+          CONTROL_PLANE_REPOSITORY: ${{ inputs.control_plane_repository }}
+          CONTROL_PLANE_REF: ${{ inputs.control_plane_ref }}
+          STUDIO_REPOSITORY: ${{ inputs.studio_repository }}
+          STUDIO_REF: ${{ inputs.studio_ref }}
+        run: |
+          cmake_args=(--preset full-ci)
+          [[ -n "${CORE_REPOSITORY}" ]] && cmake_args+=("-DGR4_CORE_REPOSITORY=${CORE_REPOSITORY}")
+          [[ -n "${CORE_REF}" ]] && cmake_args+=("-DGR4_CORE_REF=${CORE_REF}")
+          [[ -n "${LIBRARY_REPOSITORY}" ]] && cmake_args+=("-DGR4_LIBRARY_REPOSITORY=${LIBRARY_REPOSITORY}")
+          [[ -n "${LIBRARY_REF}" ]] && cmake_args+=("-DGR4_LIBRARY_REF=${LIBRARY_REF}")
+          [[ -n "${BLOCKS_REPOSITORY}" ]] && cmake_args+=("-DGR4_BLOCKS_REPOSITORY=${BLOCKS_REPOSITORY}")
+          [[ -n "${BLOCKS_REF}" ]] && cmake_args+=("-DGR4_BLOCKS_REF=${BLOCKS_REF}")
+          [[ -n "${CONTROL_PLANE_REPOSITORY}" ]] && cmake_args+=("-DGR4_CONTROL_PLANE_REPOSITORY=${CONTROL_PLANE_REPOSITORY}")
+          [[ -n "${CONTROL_PLANE_REF}" ]] && cmake_args+=("-DGR4_CONTROL_PLANE_REF=${CONTROL_PLANE_REF}")
+          [[ -n "${STUDIO_REPOSITORY}" ]] && cmake_args+=("-DGR4_STUDIO_REPOSITORY=${STUDIO_REPOSITORY}")
+          [[ -n "${STUDIO_REF}" ]] && cmake_args+=("-DGR4_STUDIO_REF=${STUDIO_REF}")
+          cmake "${cmake_args[@]}"
+
+      - name: Build and test the complete stack
+        run: cmake --build --preset full-ci --target check

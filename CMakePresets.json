@@ -1,0 +1,170 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 27,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "ON",
+        "GR4_FETCH_DEPS": "ON",
+        "GR4_ADDRESS_SANITIZER": "OFF",
+        "GR4_UB_SANITIZER": "OFF",
+        "GR4_ENABLE_CONTROL_PLANE": "OFF",
+        "GR4_ENABLE_STUDIO": "OFF"
+      }
+    },
+    {
+      "name": "dev",
+      "displayName": "GNU Radio 4 development",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/dev",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithAssert",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
+        "GR4_BUILD_TESTING": "ON",
+        "GR4_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "GNU Radio 4 debug",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/debug",
+        "GR4_BUILD_TESTING": "ON",
+        "GR4_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "GNU Radio 4 release",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/release",
+        "GR4_BUILD_TESTING": "OFF",
+        "GR4_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "asan",
+      "displayName": "GNU Radio 4 AddressSanitizer",
+      "inherits": "debug",
+      "binaryDir": "${sourceDir}/build/asan",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/asan",
+        "GR4_ADDRESS_SANITIZER": "ON"
+      }
+    },
+    {
+      "name": "ubsan",
+      "displayName": "GNU Radio 4 UndefinedBehaviorSanitizer",
+      "inherits": "debug",
+      "binaryDir": "${sourceDir}/build/ubsan",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/ubsan",
+        "GR4_UB_SANITIZER": "ON"
+      }
+    },
+    {
+      "name": "offline",
+      "displayName": "GNU Radio 4 development with system dependencies",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build/offline",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/offline",
+        "GR4_FETCH_DEPS": "OFF"
+      }
+    },
+    {
+      "name": "ci",
+      "displayName": "GNU Radio 4 continuous integration",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/ci",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithAssert",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/ci",
+        "GR4_BUILD_TESTING": "ON",
+        "GR4_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "full",
+      "displayName": "GNU Radio 4 complete development workspace",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build/full",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/full",
+        "GR4_ENABLE_CONTROL_PLANE": "ON",
+        "GR4_ENABLE_STUDIO": "ON"
+      }
+    },
+    {
+      "name": "full-ci",
+      "displayName": "GNU Radio 4 complete integration CI",
+      "inherits": "ci",
+      "binaryDir": "${sourceDir}/build/full-ci",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/full-ci",
+        "GR4_ENABLE_CONTROL_PLANE": "ON",
+        "GR4_ENABLE_STUDIO": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "jobs": 0
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "jobs": 0
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "jobs": 0
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "jobs": 0
+    },
+    {
+      "name": "ubsan",
+      "configurePreset": "ubsan",
+      "jobs": 0
+    },
+    {
+      "name": "offline",
+      "configurePreset": "offline",
+      "jobs": 0
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "jobs": 0
+    },
+    {
+      "name": "full",
+      "configurePreset": "full",
+      "jobs": 0
+    },
+    {
+      "name": "full-ci",
+      "configurePreset": "full-ci",
+      "jobs": 0
+    }
+  ]
+}

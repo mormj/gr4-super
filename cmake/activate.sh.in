@@ -1,0 +1,29 @@
+# Source this file after building:
+#   source "@CMAKE_BINARY_DIR@/activate.sh"
+
+_gr4_prefix="@CMAKE_INSTALL_PREFIX@"
+_gr4_libdir="@GR4_INSTALL_LIBDIR_FULL@"
+
+export GR4_PREFIX="${_gr4_prefix}"
+export PATH="${_gr4_prefix}/bin${PATH:+:${PATH}}"
+export CMAKE_PREFIX_PATH="${_gr4_prefix}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
+export PKG_CONFIG_PATH="${_gr4_libdir}/pkgconfig:${_gr4_prefix}/share/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+export LD_LIBRARY_PATH="${_gr4_libdir}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export DYLD_LIBRARY_PATH="${_gr4_libdir}${DYLD_LIBRARY_PATH:+:${DYLD_LIBRARY_PATH}}"
+export GNURADIO4_PLUGIN_DIRECTORIES="${_gr4_libdir}/gnuradio-4/plugins:${_gr4_libdir}${GNURADIO4_PLUGIN_DIRECTORIES:+:${GNURADIO4_PLUGIN_DIRECTORIES}}"
+
+for _gr4_python_dir in "${_gr4_libdir}"/python*/site-packages "${_gr4_libdir}"/python*/dist-packages; do
+  if [ -d "${_gr4_python_dir}" ]; then
+    export PYTHONPATH="${_gr4_python_dir}${PYTHONPATH:+:${PYTHONPATH}}"
+  fi
+done
+
+_gr4_studio_source="@GR4_STUDIO_SOURCE_DIR@"
+if [ -x "${_gr4_studio_source}/node_modules/.bin/electron" ]; then
+  export GR4_STUDIO_ELECTRON_BIN="${_gr4_studio_source}/node_modules/.bin/electron"
+fi
+
+unset _gr4_prefix
+unset _gr4_libdir
+unset _gr4_python_dir
+unset _gr4_studio_source

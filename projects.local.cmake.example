@@ -1,0 +1,12 @@
+# Copy this file to projects.local.cmake to add named out-of-tree projects.
+#
+# The dependency may be gnuradio4-core, gnuradio4-library,
+# gnuradio4-blocks, or another project declared earlier in this file.
+
+gr4_add_project(
+  my-gr4-module
+  SOURCE_DIR "../my-gr4-module"
+  DEPENDS gnuradio4-blocks
+  CMAKE_ARGS
+    "-DENABLE_PLUGINS:BOOL=ON"
+  TESTS)
