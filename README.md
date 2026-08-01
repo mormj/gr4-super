@@ -104,6 +104,9 @@ cmake --build --preset dev
 source build/dev/activate.sh
 ```
 
+If you run into issues with too much memory being used (or WSL crashing), you can limit parallel compilation
+across every component using `export CMAKE_BUILD_PARALLEL_LEVEL=4` before the cmake commands (adjust number based on memory usage).
+
 On the first build, CMake clones missing component repositories into `src/`.
 Existing working copies are developer-owned: the superbuild does not fetch,
 switch branches, or otherwise modify them.

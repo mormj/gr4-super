@@ -30,9 +30,24 @@ set(GR4_MODULES
 set(GR4_EXCLUDE_MODULES
     ""
     CACHE STRING "Registered modules to exclude from the selected groups")
+set(GR4_BUILD_PARALLEL_LEVEL
+    ""
+    CACHE STRING "Maximum parallel jobs for child builds; defaults to CMAKE_BUILD_PARALLEL_LEVEL from the environment")
 set(CMAKE_INSTALL_LIBDIR
     "lib"
     CACHE STRING "Relative library installation directory shared by all child projects")
+
+set(gr4_effective_build_parallel_level "${GR4_BUILD_PARALLEL_LEVEL}")
+if(gr4_effective_build_parallel_level STREQUAL ""
+   AND DEFINED ENV{CMAKE_BUILD_PARALLEL_LEVEL}
+   AND NOT "$ENV{CMAKE_BUILD_PARALLEL_LEVEL}" STREQUAL "")
+  set(gr4_effective_build_parallel_level "$ENV{CMAKE_BUILD_PARALLEL_LEVEL}")
+endif()
+if(NOT gr4_effective_build_parallel_level STREQUAL ""
+   AND NOT gr4_effective_build_parallel_level MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR
+    "The build parallel level must be a positive integer, got '${gr4_effective_build_parallel_level}'")
+endif()
 
 option(GR4_BUILD_TESTING "Build tests in the child projects" ON)
 option(GR4_FETCH_DEPS "Allow child projects to fetch missing dependencies" ON)
@@ -147,6 +162,19 @@ function(gr4_add_project name)
   endforeach()
   list(APPEND cmake_args ${GR4_EXTRA_CMAKE_ARGS} ${PROJECT_CMAKE_ARGS})
 
+  set(build_command_args "")
+  if(NOT gr4_effective_build_parallel_level STREQUAL "")
+    set(build_command_args
+        BUILD_COMMAND
+          "${CMAKE_COMMAND}" -E env
+          "CMAKE_BUILD_PARALLEL_LEVEL=${gr4_effective_build_parallel_level}"
+          "${CMAKE_COMMAND}" --build "<BINARY_DIR>")
+    if(name STREQUAL "gnuradio4-core")
+      list(APPEND cmake_args
+        "-DGR_BUILD_PARALLEL_LEVEL:STRING=${gr4_effective_build_parallel_level}")
+    endif()
+  endif()
+
   set(source_subdir_args "")
   if(PROJECT_SOURCE_SUBDIR)
     set(source_subdir_args SOURCE_SUBDIR "${PROJECT_SOURCE_SUBDIR}")
@@ -163,6 +191,7 @@ function(gr4_add_project name)
     LIST_SEPARATOR "|"
     CMAKE_GENERATOR "${CMAKE_GENERATOR}"
     CMAKE_ARGS ${cmake_args}
+    ${build_command_args}
     BUILD_ALWAYS TRUE
     STEP_TARGETS download
     DEPENDS ${PROJECT_DEPENDS}
