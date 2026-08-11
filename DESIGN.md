@@ -90,6 +90,15 @@ actual build sequence and avoids a separate graph implementation.
 build. With Ninja this is still incremental: unchanged repositories quickly
 report that there is no work.
 
+The outer build's configure, build, and install steps use the terminal pool, so
+only one component performs one of those steps at a time. Outer build-preset
+`jobs` values and `cmake --build --parallel`/`-j` are not forwarded to the
+nested build tools. Nested CMake concurrency is instead controlled by
+`GR4_BUILD_PARALLEL_LEVEL`, falling back to the
+`CMAKE_BUILD_PARALLEL_LEVEL` environment variable. The Node adapter is
+serialized with the other outer component steps, but npm, TypeScript, and Vite
+retain control of their own internal concurrency.
+
 The shared prefix is intentionally mutable. Removing or renaming installed
 files can leave stale artifacts there. During normal development, remove the
 `install/` directory when an install-layout change makes the prefix suspect.

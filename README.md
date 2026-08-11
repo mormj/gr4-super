@@ -104,8 +104,36 @@ cmake --build --preset dev
 source build/dev/activate.sh
 ```
 
-If you run into issues with too much memory being used (or WSL crashing), you can limit parallel compilation
-across every component using `export CMAKE_BUILD_PARALLEL_LEVEL=4` before the cmake commands (adjust number based on memory usage).
+### Limit parallel builds
+
+If compilation uses too much memory, or causes WSL to become unstable, export a
+positive parallel level before configuring and building. This is the recommended
+way to limit all nested CMake component builds:
+
+```sh
+export CMAKE_BUILD_PARALLEL_LEVEL=4 # adjust for the available memory
+cmake --preset dev
+cmake --build --preset dev
+```
+
+For a limit stored in one build profile instead of the shell environment, set
+the superbuild cache option during configuration:
+
+```sh
+cmake --preset dev -DGR4_BUILD_PARALLEL_LEVEL=4
+cmake --build --preset dev
+```
+
+`GR4_BUILD_PARALLEL_LEVEL` takes precedence over
+`CMAKE_BUILD_PARALLEL_LEVEL` when both are set, and both accept only positive
+integers. A build-preset `jobs` value or `cmake --build ... --parallel N`
+(`cmake --build ... -jN`) controls only the outer superbuild and is not
+propagated to its nested CMake builds; do not use these as the component
+compilation limit.
+
+The limit applies to CMake components, including control-plane and Studio's C++
+blocks. Studio's npm, TypeScript, and Vite build uses those tools' own internal
+concurrency and is not governed by the CMake parallel level.
 
 On the first build, CMake clones missing component repositories into `src/`.
 Existing working copies are developer-owned: the superbuild does not fetch,
@@ -186,6 +214,7 @@ personal build choices are not committed accidentally. For example:
       "binaryDir": "${sourceDir}/build/my-radio",
       "cacheVariables": {
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/my-radio",
+        "GR4_BUILD_PARALLEL_LEVEL": "4",
         "GR4_MODULE_GROUPS": "base;experimental",
         "GR4_BLOCKS_CMAKE_ARGS": "-DENABLE_EXAMPLES=OFF"
       }
@@ -200,6 +229,10 @@ personal build choices are not committed accidentally. For example:
   ]
 }
 ```
+
+The `GR4_BUILD_PARALLEL_LEVEL` cache entry limits the nested CMake builds. The
+build preset's `jobs` field controls only the outer superbuild; its `0` value
+leaves outer scheduling at the build tool's native default.
 
 The named profile then behaves like a supplied profile:
 
@@ -520,12 +553,17 @@ tree with the top-level `check` target and requires that tree to contain at
 least one test.
 
 Project-specific configuration belongs in its `CMAKE_ARGS` list. Options that
-should apply to every component may be supplied through `GR4_EXTRA_CMAKE_ARGS`:
+should apply to every CMake component may be supplied through
+`GR4_EXTRA_CMAKE_ARGS`:
 
 ```sh
 cmake --preset dev \
-  -DGR4_EXTRA_CMAKE_ARGS="-DUSE_CCACHE=ON;-DGR_BUILD_PARALLEL_LEVEL=6"
+  -DGR4_EXTRA_CMAKE_ARGS="-DUSE_CCACHE=ON" \
+  -DGR4_BUILD_PARALLEL_LEVEL=6
 ```
+
+`GR_BUILD_PARALLEL_LEVEL` is a core-project option and should not be passed
+through `GR4_EXTRA_CMAKE_ARGS` as a workspace-wide build limit.
 
 ## Top-Level CMake Options
 
@@ -537,6 +575,7 @@ cmake --preset dev \
 | `GR4_EXCLUDE_MODULES` | empty | Registered modules to remove from selected groups |
 | `GR4_EXTRA_PROJECTS` | empty | Additional CMake project paths |
 | `GR4_EXTRA_CMAKE_ARGS` | empty | Additional CMake arguments for every child project |
+| `GR4_BUILD_PARALLEL_LEVEL` | empty | Positive maximum job count for nested CMake builds; falls back to `CMAKE_BUILD_PARALLEL_LEVEL`, then the build tool's native default |
 | `GR4_CORE_CMAKE_ARGS` | empty | Additional arguments for core only |
 | `GR4_LIBRARY_CMAKE_ARGS` | empty | Additional arguments for library only |
 | `GR4_BLOCKS_CMAKE_ARGS` | empty | Additional arguments for blocks only |
