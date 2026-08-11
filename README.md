@@ -624,6 +624,10 @@ cmake --preset full-ci
 cmake --build --preset full-ci --target check
 ```
 
+The workflow exports `CMAKE_BUILD_PARALLEL_LEVEL=4`, limiting each nested CMake
+component build to four concurrent jobs. As with local builds, this setting does
+not govern Studio's npm, TypeScript, or Vite internal concurrency.
+
 The component repositories retain responsibility for their larger compiler,
 platform, sanitizer, coverage, and WebAssembly matrices. This repository checks
 the contract between the components: ordered installation, package discovery,
