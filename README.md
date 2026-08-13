@@ -634,10 +634,9 @@ the contract between the components: ordered installation, package discovery,
 component tests, incubator, control-plane, Studio blocks, the Studio frontend,
 and consumption by an out-of-tree project.
 
-In addition to pushes and pull requests, a daily scheduled run builds the
-latest default revisions to detect compatibility drift between repositories.
 Manual runs accept one `cmake_options` value containing space-separated `-D`
-overrides, so newly registered modules do not require workflow changes:
+overrides, so a coordinated branch or fork can replace the manifest defaults
+without requiring workflow changes:
 
 ```sh
 gh workflow run ci.yml \
@@ -647,8 +646,11 @@ gh workflow run ci.yml \
 This supports coordinated changes and testing branches from forks without
 hardcoding every repository into the workflow interface. Each override must be
 one shell word; values containing spaces are not supported by this convenience
-input. The default CI run intentionally follows each module's configured
-revision—currently `main`—to detect cross-repository compatibility drift.
+input.
+
+Push, pull-request, scheduled, and manual runs otherwise follow each module's
+manifest revision, currently `main`, so CI detects compatibility drift between
+repositories.
 
 ## Helpful Links
 
