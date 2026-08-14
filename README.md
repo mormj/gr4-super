@@ -652,6 +652,43 @@ Push, pull-request, scheduled, and manual runs otherwise follow each module's
 manifest revision, currently `main`, so CI detects compatibility drift between
 repositories.
 
+## Platform Containers
+
+The OCI container definitions in `containers/` verify the complete workspace
+from a clean checkout.  They deliberately omit local `src/`, `build/`, and
+`install/` directories so the superbuild clones its component repositories as
+it would for a new user.  Each container runs the exact full-workspace check:
+
+```sh
+cmake --preset full
+cmake --build --preset full --target check
+```
+
+Podman is the supported local interface.  Build either verification image from
+the repository root:
+
+```sh
+podman build -f containers/debian-sid/Dockerfile -t gr4-test:debian-sid .
+podman build -f containers/ubuntu-24.04/Dockerfile -t gr4-test:ubuntu-24.04 .
+```
+
+The default `verify` stage performs the check during the image build.  To keep
+the toolchain image for interactive investigation instead, select its first
+stage and mount a working tree:
+
+```sh
+podman build --target toolchain -f containers/debian-sid/Dockerfile \
+  -t gr4-toolchain:debian-sid .
+podman run --rm -it --userns=keep-id \
+  -v "$PWD:/workspace:Z" -w /workspace \
+  gr4-toolchain:debian-sid full
+```
+
+The final argument selects a CMake build preset and defaults to `full`.  The
+Sid image is a rolling compatibility canary; retain its build log and resolved
+base-image digest when reporting a regression so it can be reproduced after
+Sid advances.
+
 ## Helpful Links
 
 - [GNU Radio website](https://gnuradio.org/)
