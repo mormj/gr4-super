@@ -1,0 +1,12 @@
+# A platform container must exercise the same first-build path as a fresh
+# checkout.  In particular, do not copy developer-owned component clones or
+# prior build products into the verification stage.
+.git/
+.agents/
+.codex/
+build/
+install/
+src/
+node_modules/
+CMakeUserPresets.json
+projects.local.cmake
