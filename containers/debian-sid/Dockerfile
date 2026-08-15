@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 #
 # Rolling compatibility canary.  The `verify` stage is intentionally the
-# default so `podman build` tests a clean checkout, including the superbuild's
+# default so a container build tests a clean checkout, including the superbuild's
 # first-clone behavior.  Use `--target toolchain` for interactive diagnosis.
 FROM node:22-bookworm-slim AS node
 
