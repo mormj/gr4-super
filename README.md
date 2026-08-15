@@ -7,6 +7,10 @@
 
 # GNU Radio 4.0
 
+[![Main CI](https://github.com/gnuradio/gnuradio4/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/gnuradio/gnuradio4/actions/workflows/ci.yml)
+[![Studio Web image](https://img.shields.io/badge/ghcr.io-gnuradio4--studio-2496ED?logo=github)](https://github.com/gnuradio/gnuradio4/pkgs/container/gnuradio4-studio)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > [!IMPORTANT]
 > GNU Radio 4.0 (GR4) is a maturing beta as it approaches its first stable
 > release. It is suitable for evaluation, experimentation, and early
