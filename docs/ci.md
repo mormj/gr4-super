@@ -43,6 +43,7 @@ Use Docker for local builds, matching the GitHub Actions build engine:
 
 ```sh
 docker build -f containers/debian-sid/Dockerfile -t gr4-test:debian-sid .
+docker build -f containers/debian-trixie/Dockerfile -t gr4-test:debian-trixie .
 docker build -f containers/ubuntu-24.04/Dockerfile -t gr4-test:ubuntu-24.04 .
 docker build -f containers/ubuntu-26.04/Dockerfile -t gr4-test:ubuntu-26.04 .
 docker build -f containers/fedora-44/Dockerfile -t gr4-test:fedora-44 .
@@ -63,7 +64,7 @@ The `Platform containers` workflow discovers every Dockerfile in `containers/`
 and rebuilds it each Sunday without publishing. This includes the distribution
 verification images and the Studio web image. The Debian Sid image is the
 rolling compatibility canary; retain its build log and base-image digest when
-reporting a regression.
+reporting a regression. Debian Trixie is the stable Debian compatibility target.
 
 ## Docker and Podman
 
