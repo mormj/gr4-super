@@ -1,34 +1,47 @@
-name: Feature Request
-description: Request a GNU Radio Feature
-labels: ["Feature Request"]
+name: Workspace enhancement
+description: Propose an improvement to GNU Radio 4 workspace integration
+labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        This is the place to request new features or enhancements to the GNU Radio codebase
-  - type: textarea
-    id: feature-description
-    attributes:
-      label: Feature Description
-    validations:
-      required: true
+        Use this form for superbuild, preset, container, CI, or shared
+        documentation improvements. New blocks and component APIs belong in the
+        owning component repository.
   - type: dropdown
-    id: urgency
+    id: area
     attributes:
-      label: Feature Urgency
-      description: How urgent is this to get into the codebase?
+      label: Affected workspace area
       options:
-        - high (impacts broad portion of ecosystem)
-        - medium (would be nice to have in the near future)
-        - low (just an idea)
+        - Module manifest or dependency orchestration
+        - Build preset or developer workflow
+        - Integration test
+        - Distribution or Studio container
+        - CI or published artifact
+        - Documentation
     validations:
       required: true
   - type: textarea
-    id: more-info
+    id: problem
     attributes:
-      label: More Information
+      label: Problem or opportunity
+      description: What workflow or integration limitation should change?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Describe the desired behavior and any alternatives considered.
+    validations:
+      required: true
+  - type: textarea
+    id: coordination
+    attributes:
+      label: Component coordination
+      description: List affected component repositories or linked issues and pull requests, if applicable.
     validations:
       required: false
   - type: markdown
     attributes:
-      value: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/gnuradio/gr-governance/blob/main/CODE_OF_CONDUCT.md)
+      value: By submitting this issue, you agree to follow the [Code of Conduct](https://github.com/gnuradio/gnuradio4/blob/main/CODE_OF_CONDUCT.md).
