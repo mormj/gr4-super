@@ -670,6 +670,8 @@ the repository root:
 ```sh
 podman build -f containers/debian-sid/Dockerfile -t gr4-test:debian-sid .
 podman build -f containers/ubuntu-24.04/Dockerfile -t gr4-test:ubuntu-24.04 .
+podman build -f containers/ubuntu-26.04/Dockerfile -t gr4-test:ubuntu-26.04 .
+podman build -f containers/fedora-44/Dockerfile -t gr4-test:fedora-44 .
 ```
 
 The default `verify` stage performs the check during the image build.  To keep
@@ -688,6 +690,27 @@ The final argument selects a CMake build preset and defaults to `full`.  The
 Sid image is a rolling compatibility canary; retain its build log and resolved
 base-image digest when reporting a regression so it can be reproduced after
 Sid advances.
+
+### Run Studio in a browser
+
+The browser-ready Studio image is published to GitHub Container Registry on
+every push to `main`. With Podman, run it and open the displayed address in a
+browser:
+
+```sh
+podman run --rm --pull=always -p 8080:8080 ghcr.io/gnuradio/gnuradio4-studio:latest
+```
+
+Then visit <http://localhost:8080>. The image serves the Studio web bundle and
+proxies its same-origin `/api/*` requests, including WebSockets, to the
+control-plane process inside the container. It is intended for a trusted
+development environment; it does not add authentication or TLS termination.
+After the first publication, set the GitHub Container Registry package
+visibility to **Public** if anonymous pulls should work.
+
+The `Platform containers` workflow rebuilds every Dockerfile in `containers/`
+each Sunday without publishing. The Studio web image is additionally rebuilt
+and published on each push to `main`.
 
 ## Helpful Links
 
