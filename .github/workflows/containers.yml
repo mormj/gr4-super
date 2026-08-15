@@ -1,0 +1,53 @@
+name: Platform containers
+
+on:
+  schedule:
+    - cron: "37 5 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: Discover container definitions
+    runs-on: ubuntu-latest
+    outputs:
+      dockerfiles: ${{ steps.matrix.outputs.dockerfiles }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - id: matrix
+        name: Build matrix
+        shell: bash
+        run: |
+          dockerfiles="$(find containers -name Dockerfile -print | sort | \
+            jq --raw-input --raw-output --slurp \
+              'split("\n") | map(select(length > 0) | {file: ., name: sub("^containers/"; "")}) | tojson')"
+          echo "dockerfiles=${dockerfiles}" >> "$GITHUB_OUTPUT"
+
+  verify:
+    name: ${{ matrix.name }}
+    needs: discover
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.discover.outputs.dockerfiles) }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          push: false
