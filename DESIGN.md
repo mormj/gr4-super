@@ -1,48 +1,27 @@
-# Design notes
+# GNU Radio 4 superbuild design
 
-## What `gr4-dev-super` does today
+This document records the architectural choices behind the GNU Radio 4
+workspace. Operational instructions belong in [the documentation index](README.md#documentation).
 
-The existing workspace combines several responsibilities:
+## Architecture
 
-1. `repos.yaml` plus `bootstrap.sh` clone and pin working copies.
-2. `build-all.sh` configures, builds, and installs each repository in manifest
-   order.
-3. Every repository has an independent build directory.
-4. One install prefix is added to `CMAKE_PREFIX_PATH` so downstream
-   repositories find upstream packages.
-5. Argument files provide global and per-repository configuration.
-6. `dev-env.sh` provides the runtime library, package, executable, and plugin
-   search paths.
-7. Additional scripts provide diagnostics, cleanup, scaffolding, memory
-   profiling, containers, and services.
+The workspace uses a CMake superbuild based on `ExternalProject`, not a unified
+`add_subdirectory()` build. The high-level repository relationships are shown
+in the [README diagram](README.md#repository-dependencies).
 
-Items 2 through 5 are the actual build graph. The remaining items are useful
-workspace tooling, but do not need to be reproduced to prove a CMake-based
-solution.
+The manifest's build ordering is more specific than that conceptual view:
 
-## Recommended model
+- Library consumes the installed Core package.
+- Blocks consumes the installed Core and Library packages.
+- Incubator and Studio blocks build after Blocks.
+- Control Plane compiles against Core. The superbuild schedules it after
+  Blocks so the normal runtime plugin catalog is available.
+- The Node Studio application shares its checkout with Studio blocks. When
+  Control Plane is also selected, Studio builds after it and communicates with
+  it through HTTP and WebSocket APIs rather than linking to block libraries.
 
-Use a CMake superbuild based on `ExternalProject`, not a unified
-`add_subdirectory()` build.
-
-```text
-gnuradio4-core
-      |
-      v
-gnuradio4-library
-      |
-      v
-gnuradio4-blocks
-      ├── out-of-tree projects
-      ├── gr4-incubator
-      ├── gnuradio4-control-plane
-      └── gnuradio4-studio blocks
-                    |
-                    v
-          gnuradio4-studio application
-
-All install into: <super-repo>/install
-```
+Every selected CMake component installs into the active profile's shared
+prefix, such as `install/` for `dev` or `install/full/` for `full`.
 
 This retains the package boundaries developers and CI encounter when each
 repository is built alone. It also lets each repository retain its own cache,
@@ -73,10 +52,10 @@ options, generated files, and test tree.
   creating competing clone steps.
 - The Node adapter hashes `package.json` and `package-lock.json`, running
   `npm ci` only when those inputs or `node_modules` change.
-- Command-line OOT projects build by default; their CTest trees are registered
-  only when the explicit `TESTS` keyword is used.
-- Scaffolding, profiling, Docker, and service management stay outside the
-  build graph and can be added independently if they prove necessary.
+- One-off `GR4_EXTRA_PROJECTS` entries build by default but do not register
+  tests. Local modules join `check` only when declared with `TESTS`.
+- Scaffolding, profiling, containers, and service management remain independent
+  of the build graph.
 
 ## Tradeoffs
 

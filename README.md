@@ -8,733 +8,168 @@
 # GNU Radio 4.0
 
 > [!IMPORTANT]
-> GNU Radio 4.0 (GR4) is currently in a maturing beta state as it approaches
-> its first stable release. It is suitable for evaluation, experimentation,
-> and early development. GNU Radio 3.x remains the stable release series for
-> users who require the existing production-supported platform.
+> GNU Radio 4.0 (GR4) is a maturing beta as it approaches its first stable
+> release. It is suitable for evaluation, experimentation, and early
+> development. GNU Radio 3.x remains the stable release series for users who
+> require the existing production-supported platform.
 
 GNU Radio is a free and open-source signal-processing runtime and software
-development toolkit. It began in software-defined radio and wireless
-communications, and is also used in research, education, radio astronomy,
-particle physics, test systems, and commercial applications.
+development toolkit. GR4 provides a modern C++23 block API, runtime-loadable
+blocks and schedulers, an installed development SDK, and browser and desktop
+Studio applications. This repository is the top-level GR4 workspace: it builds
+the independently maintained core, library, blocks, incubator, control-plane,
+and Studio repositories in dependency order into one development prefix.
 
-This is the top-level GNU Radio 4 development workspace. It brings together the
-three primary GNU Radio 4 repositories and provides one CMake entry point for
-building the complete project:
+## Quick start
 
-| Repository | Contents |
-| --- | --- |
-| `gnuradio4-core` | Runtime, scheduler, graph and block model, plugin infrastructure, and block-development SDK |
-| `gnuradio4-library` | Reusable DSP algorithms and supporting libraries |
-| `gnuradio4-blocks` | Standard GNU Radio 4 signal-processing blocks |
-| `gr4-incubator` | Optional staging area for experimental blocks, schedulers, and utilities |
-| `gnuradio4-control-plane` | Optional runtime and HTTP control service |
-| `gnuradio4-studio` | Optional Studio blocks and browser/desktop application |
-
-Each component remains an independent repository and CMake project:
-
-```text
-gnuradio4-core
-      |
-      v
-gnuradio4-library
-      |
-      v
-gnuradio4-blocks
-      ├── out-of-tree projects
-      ├── gr4-incubator
-      ├── gnuradio4-control-plane
-      └── gnuradio4-studio blocks
-                    |
-                    v
-          gnuradio4-studio application
-```
-
-The top-level build configures each repository separately, builds them in
-dependency order, and installs them into a shared development prefix. This
-preserves the same package boundaries used by standalone and out-of-tree
-projects.
-
-## What's New in GNU Radio 4.0?
-
-GNU Radio 4.0 is a major modernization of the GNU Radio runtime, block model,
-and application architecture. It retains the familiar workflow of constructing
-signal-processing systems from reusable blocks and flowgraphs while introducing
-a modern C++ foundation and more flexible runtime behavior.
-
-- **Familiar flowgraph model:** Blocks and flowgraphs remain central to GNU
-  Radio applications.
-- **Modern C++ block development:** C++23 APIs and compile-time reflection make
-  blocks direct, type-safe, and maintainable.
-- **Stronger data types:** Flowgraphs can use fundamental numeric types,
-  complex samples, structured values, and application-specific types.
-- **High-performance runtime:** Lock-free buffers, compile-time optimization,
-  and SIMD support provide efficient signal processing.
-- **Flexible scheduling:** Schedulers can be selected or developed for
-  throughput, latency, parallelism, and application-specific requirements.
-- **Recursive flowgraphs and feedback:** Graphs can express feedback loops and
-  more complex execution structures.
-- **Extensible block ecosystem:** Installed CMake packages, block-registration
-  tooling, and runtime plugins support independently developed block libraries.
-- **Broader execution targets:** The architecture supports native CPUs,
-  WebAssembly, and future heterogeneous execution environments.
-
-## Requirements
-
-GNU Radio 4 uses C++23. The primary projects currently require:
-
-- CMake 3.27 or newer
-- Ninja
-- GCC 14 or newer; GCC 15 or newer is recommended
-- Clang 20 or newer is recommended when using Clang
-- Git for obtaining the component repositories
-- Node.js 22 and npm when building the complete Studio workspace
-
-Individual block modules and optional features may require additional system
-packages. By default, the development presets allow the component projects to
-fetch selected dependencies.
-
-## Build GNU Radio 4
-
-Configure and build the normal development profile:
+Clone the workspace and build the core development stack:
 
 ```sh
+git clone https://github.com/gnuradio/gnuradio4.git
+cd gnuradio4
 cmake --preset dev
 cmake --build --preset dev
 source build/dev/activate.sh
 ```
 
-### Limit parallel builds
-
-If compilation uses too much memory, or causes WSL to become unstable, export a
-positive parallel level before configuring and building. This is the recommended
-way to limit all nested CMake component builds:
-
-```sh
-export CMAKE_BUILD_PARALLEL_LEVEL=4 # adjust for the available memory
-cmake --preset dev
-cmake --build --preset dev
-```
-
-For a limit stored in one build profile instead of the shell environment, set
-the superbuild cache option during configuration:
-
-```sh
-cmake --preset dev -DGR4_BUILD_PARALLEL_LEVEL=4
-cmake --build --preset dev
-```
-
-`GR4_BUILD_PARALLEL_LEVEL` takes precedence over
-`CMAKE_BUILD_PARALLEL_LEVEL` when both are set, and both accept only positive
-integers. A build-preset `jobs` value or `cmake --build ... --parallel N`
-(`cmake --build ... -jN`) controls only the outer superbuild and is not
-propagated to its nested CMake builds; do not use these as the component
-compilation limit.
-
-The limit applies to CMake components, including control-plane and Studio's C++
-blocks. Studio's npm, TypeScript, and Vite build uses those tools' own internal
-concurrency and is not governed by the CMake parallel level.
-
-On the first build, CMake clones missing component repositories into `src/`.
-Existing working copies are developer-owned: the superbuild does not fetch,
-switch branches, or otherwise modify them.
-
-The default build performs three independent configure/build/install cycles in
-dependency order. All three components are available through the aggregate
-`gr4` target, which is also the default target.
-
-### macOS with Homebrew
-
-Apple Clang supplied by the Command Line Tools may be too old for the C++23
-features used by GNU Radio 4. The tracked
-`CMakeUserPresets.json.mac.example` selects Homebrew LLVM and provides separate
-development and full-workspace profiles. It assumes an Apple Silicon Homebrew
-prefix (`/opt/homebrew`); on Intel Macs, replace `/opt/homebrew` with
-`/usr/local` in the copied file.
-
-```sh
-brew install cmake ninja llvm
-cp CMakeUserPresets.json.mac.example CMakeUserPresets.json
-
-cmake --preset dev-mac
-cmake --build --preset dev-mac
-source build/dev-mac/activate.sh
-```
-
-For the complete workspace, use `full-mac` in place of `dev-mac`. It also
-requires Node.js 22 and npm. If ccache cannot write to its cache directory,
-disable it for the build:
-
-```sh
-CCACHE_DISABLE=1 cmake --build --preset full-mac
-```
-
-### Build profiles
-
-| Preset | Configuration | Intended use | Install prefix |
-| --- | --- | --- | --- |
-| `dev` | RelWithAssert, tests, warnings as errors | Normal development | `install/` |
-| `debug` | Debug, tests | Debugger-friendly development | `install/debug/` |
-| `release` | Release, no tests | Performance and installation validation | `install/release/` |
-| `asan` | Debug, tests, AddressSanitizer | Memory-error diagnostics | `install/asan/` |
-| `ubsan` | Debug, tests, UndefinedBehaviorSanitizer | Undefined-behavior diagnostics | `install/ubsan/` |
-| `offline` | RelWithAssert, tests, system dependencies | Build without dependency downloads | `install/offline/` |
-| `ci` | RelWithAssert, tests, warnings as errors | Base-stack integration CI | `install/ci/` |
-| `full` | RelWithAssert, tests, incubator, control-plane, Studio | Complete application development | `install/full/` |
-| `full-ci` | RelWithAssert, tests, incubator, control-plane, Studio | Complete integration CI | `install/full-ci/` |
-
-Use the same preset name to configure, build, and activate a profile:
-
-```sh
-cmake --preset debug
-cmake --build --preset debug
-source build/debug/activate.sh
-```
-
-List the available presets with:
-
-```sh
-cmake --list-presets
-cmake --build --list-presets
-```
-
-### Custom user profiles
-
-Keep machine-local profiles in `CMakeUserPresets.json`. CMake loads this file
-alongside the checked-in presets, and the superrepo ignores it so paths and
-personal build choices are not committed accidentally. For example:
-
-```json
-{
-  "version": 6,
-  "configurePresets": [
-    {
-      "name": "my-radio",
-      "inherits": "dev",
-      "binaryDir": "${sourceDir}/build/my-radio",
-      "cacheVariables": {
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/my-radio",
-        "GR4_BUILD_PARALLEL_LEVEL": "4",
-        "GR4_MODULE_GROUPS": "base;experimental",
-        "GR4_BLOCKS_CMAKE_ARGS": "-DENABLE_EXAMPLES=OFF"
-      }
-    }
-  ],
-  "buildPresets": [
-    {
-      "name": "my-radio",
-      "configurePreset": "my-radio",
-      "jobs": 0
-    }
-  ]
-}
-```
-
-The `GR4_BUILD_PARALLEL_LEVEL` cache entry limits the nested CMake builds. The
-build preset's `jobs` field controls only the outer superbuild; its `0` value
-leaves outer scheduling at the build tool's native default.
-
-The named profile then behaves like a supplied profile:
-
-```sh
-cmake --preset my-radio
-cmake --build --preset my-radio
-source build/my-radio/activate.sh
-```
-
-Curated top-level options cover cross-workspace choices. The component-specific
-`GR4_*_CMAKE_ARGS` variables pass advanced options only to their owning child
-project. These variables can use only options already exposed by that
-repository. For example, the current blocks project provides opt-in audio and
-SDR options, but its standard block modules are built unconditionally.
-
-### Select workspace modules
-
-The checked-in [`modules.cmake`](modules.cmake) manifest declares repositories,
-dependencies, build adapters, tests, and membership in named module groups:
-
-| Group | Modules |
-| --- | --- |
-| `base` | core, library, blocks |
-| `full` | incubator, control-plane, Studio |
-| `experimental` | incubator |
-| `applications` | control-plane, Studio |
-
-Select groups, add individual registered modules, or remove optional modules:
-
-```sh
-# Core stack plus incubator
-cmake --preset dev -DGR4_MODULE_GROUPS="base;experimental"
-
-# Add one registered module and its required dependencies
-cmake --preset dev -DGR4_MODULES=gr4-incubator
-
-# Full profile without incubator
-cmake --preset full -DGR4_EXCLUDE_MODULES=gr4-incubator
-```
-
-Required dependencies are selected automatically. Excluding a required
-dependency is an error rather than producing a partial build.
-The earlier `GR4_ENABLE_INCUBATOR`, `GR4_ENABLE_CONTROL_PLANE`, and
-`GR4_ENABLE_STUDIO` switches still include their modules when set to `ON`.
-Their old `OFF` defaults defer to module selection; new profiles should use
-`GR4_EXCLUDE_MODULES` to disable modules.
-
-To add a repository to the shared workspace later, append one ordered
-declaration to `modules.cmake`:
-
-```cmake
-gr4_register_module(
-  NAME gr4-radio-astronomy
-  TYPE CMAKE
-  SOURCE_DIR gr4-radio-astronomy
-  SOURCE_KEY RADIO_ASTRONOMY
-  OPTIONS_KEY RADIO_ASTRONOMY
-  REPOSITORY https://github.com/example/gr4-radio-astronomy.git
-  REF main
-  GROUPS full
-  DEPENDS gnuradio4-blocks
-  TESTS)
-```
-
-That declaration creates the build, download, clean, aggregate, and test
-integration along with `GR4_RADIO_ASTRONOMY_REPOSITORY`,
-`GR4_RADIO_ASTRONOMY_REF`, and `GR4_RADIO_ASTRONOMY_CMAKE_ARGS` cache
-variables. Keep declarations after their required dependencies. `TYPE CMAKE`
-and `TYPE NODE` use the existing generic adapters; `SOURCE_SUBDIR` covers a
-CMake project below a repository root.
-
-#### Module declaration reference
-
-`modules.cmake` is the checked-in workspace manifest.
-`projects.local.cmake` is its ignored, machine-local extension. Both accept the
-same `gr4_register_module()` arguments:
-
-| Argument | Meaning |
-| --- | --- |
-| `NAME` | Required unique target and module name |
-| `TYPE` | `CMAKE` by default, or `NODE` |
-| `SOURCE_DIR` | Source path; relative paths are resolved below `GR4_SOURCE_ROOT` |
-| `SOURCE_SUBDIR` | CMake project directory below the repository root |
-| `REPOSITORY` | Git URL used only when the source is missing |
-| `REF` | Branch, tag, or commit to clone; defaults to `main` |
-| `SOURCE_KEY` | Cache-variable stem for `REPOSITORY` and `REF` overrides |
-| `OPTIONS_KEY` | Cache-variable stem for component-specific CMake arguments |
-| `GROUPS` | Named groups that select this module |
-| `DEPENDS` | Required registered modules, selected automatically |
-| `OPTIONAL_DEPENDS` | Dependencies used only when independently selected |
-| `SOURCE_PROVIDER` | For `NODE`, a required module that populates a shared repository |
-| `CMAKE_ARGS` | Fixed additional arguments for a `CMAKE` child |
-| `TESTS` | Register the child tests with the top-level `check` target |
-
-Declarations are ordered: dependencies and source providers must appear before
-their consumers. Configuration rejects unknown arguments, missing values,
-unknown modules, invalid cache keys, self-dependencies, forward dependencies
-(including cycles), and attempts to exclude a required dependency.
-`SOURCE_PROVIDER` and `REPOSITORY` are mutually exclusive; Node-specific build
-customization belongs in that repository's package scripts rather than
-`CMAKE_ARGS`.
-
-An existing checkout is always developer-owned. The superbuild uses it without
-fetching or switching revisions when its expected source marker is present. A
-missing source is cloned at the configured ref into a detached checkout; a
-non-empty or malformed destination is never replaced. Failed clones remove
-their private staging directory so a later build can retry cleanly.
-
-### Build individual components
-
-Targets include their upstream dependencies. For example, building
-`gnuradio4-blocks` first ensures that core and library are installed.
-
-```sh
-cmake --build --preset dev --target gnuradio4-core
-cmake --build --preset dev --target gnuradio4-library
-cmake --build --preset dev --target gnuradio4-blocks
-```
-
-### Build incubator, control-plane, and Studio
-
-The `full` preset adds gr4-incubator, control-plane, Studio's CMake block
-plugins, and the Node/Vite desktop application. It enables incubator's plugin
-build so its blocks and schedulers are installed and discoverable at runtime.
-Incubator keeps its standalone warning policy because plugin builds include
-third-party headers that may emit compiler warnings:
+Build the complete workspace, including incubator, control-plane, and the
+desktop Studio application:
 
 ```sh
 cmake --preset full
 cmake --build --preset full
 source build/full/activate.sh
-gr4-studio-sandbox-setup # one-time setup on Ubuntu/AppArmor hosts
 gr4-studio
 ```
 
-The build installs the following into `install/full/`:
+On Ubuntu hosts with restricted unprivileged user namespaces, run
+`gr4-studio-sandbox-setup` once before launching Studio. See the
+[Studio guide](docs/studio.md#desktop-studio) for details.
 
-```text
-bin/gr4cp_server
-bin/gr4cp-cli
-bin/gr4-studio
-lib/                         # GNU Radio, control-plane, and Studio libraries/plugins
-share/gr4-studio/            # frontend and desktop assets
-```
-
-Full-profile targets can also be built individually:
+Run the published browser Studio image instead:
 
 ```sh
-cmake --build --preset full --target gnuradio4-control-plane
-cmake --build --preset full --target gr4-incubator
-cmake --build --preset full --target gnuradio4-studio-blocks
-cmake --build --preset full --target gnuradio4-studio
+docker pull ghcr.io/gnuradio/gnuradio4-studio:latest
+docker run --rm -p 8080:8080 ghcr.io/gnuradio/gnuradio4-studio:latest
 ```
 
-`gnuradio4-studio` installs its locked npm dependencies, builds the desktop
-bundle, and installs it with a pinned Electron runtime into the profile prefix.
-The launcher never downloads an ad hoc Electron release through `npx`. The
-dependency installation is repeated automatically when `package.json` or
-`package-lock.json` changes. Its build depends on both the Studio blocks and
-control-plane in the `full` preset.
+Then visit <http://localhost:8080>.
 
-For a local launch, Studio treats the block catalog as the readiness boundary:
-the startup screen remains in place until `GET /blocks` returns a valid catalog.
-If `gr4cp_server` exits during startup, the launcher stops and prints the
-backend log instead of opening an unusable canvas. Each run reserves an
-available loopback port and passes that exact endpoint to Studio; local mode
-does not require port 8080 to be free.
+The initial build clones missing component repositories into `src/`. After a
+checkout exists, the superbuild leaves its Git state alone; you choose when to
+fetch, update, or switch its branch.
 
-Ubuntu releases that restrict unprivileged user namespaces through AppArmor
-need a one-time profile installation after the first Studio build:
+Docker is the documented container host. Podman is supported as a rootless
+alternative; see [CI and containers](docs/ci.md#docker-and-podman).
 
-```sh
-source build/full/activate.sh
-gr4-studio-sandbox-setup
+## Requirements
+
+The core stack requires CMake 3.27+, Ninja, Git, and a C++23 compiler (GCC 14+
+or a current Clang). The complete Studio workspace also requires Node.js 22 and
+npm. See [Build guide](docs/building.md) for platform setup, profile choices,
+and resource limits.
+
+## Workspace components
+
+| Component | Purpose |
+| --- | --- |
+| `gnuradio4-core` | Runtime, scheduler, graph/block model, plugins, and SDK |
+| `gnuradio4-library` | Reusable DSP algorithms and support libraries |
+| `gnuradio4-blocks` | Standard signal-processing and utility blocks |
+| `gr4-incubator` | Experimental blocks, schedulers, and utilities |
+| `gnuradio4-control-plane` | Runtime and HTTP control service |
+| `gnuradio4-studio` | Studio blocks plus browser and desktop application |
+
+## Repository dependencies
+
+```mermaid
+flowchart TD
+    subgraph foundation[Foundation]
+        direction LR
+        core[gnuradio4-core]
+        library[gnuradio4-library]
+    end
+
+    subgraph modules[Modules]
+        direction LR
+        blocks[gnuradio4-blocks]
+        incubator[gr4-incubator]
+        oots["Out-of-tree modules (OOTs)"]
+    end
+
+    core --> blocks
+    library --> blocks
+    core --> incubator
+    library --> incubator
+    core --> oots
+    library --> oots
+
+    subgraph applications[Applications]
+        direction LR
+        control_plane[gnuradio4-control-plane] --> studio[gnuradio4-studio]
+    end
+
+    core --> control_plane
+    blocks -. plugins .-> control_plane
+    incubator -. plugins .-> control_plane
+    oots -. plugins .-> control_plane
 ```
 
-The setup command installs a path-specific AppArmor profile for the Electron
-runtime under the active prefix and therefore requests `sudo`. It remains valid
-across rebuilds at that prefix. Use `gr4-studio-sandbox-setup --remove` before
-permanently deleting or relocating the prefix. Hosts without AppArmor user
-namespace restrictions do not need to run the helper.
+Solid arrows point from a build dependency to the repository that uses it. The
+dotted connections into the control plane (`gr4cp`) denote runtime plugin
+discovery rather than a build dependency. The superbuild coordinates the
+repositories it includes; OOTs remain independently owned and can be added to
+the workspace as described in the [extending guide](docs/extending.md).
 
-The Studio blocks declaration currently carries two compatibility arguments in
-`modules.cmake`: it disables the libstdc++ TBB parallel backend for the current
-toolchain combination and injects top-level CTest enablement through
-`cmake/EnableTesting.cmake`. They are intentionally isolated in the manifest
-and should be removed when the Studio project no longer requires them.
+## Documentation
 
-Incubator, control-plane, and Studio can be selected independently without
-using the preset:
+| Task | Documentation |
+| --- | --- |
+| Configure, build, select a profile, or use macOS | [Build guide](docs/building.md) |
+| Select modules or register a workspace module | [Module configuration](docs/modules.md) |
+| Launch desktop or browser Studio | [Studio guide](docs/studio.md) |
+| Run component and integration tests | [Testing guide](docs/testing.md) |
+| Develop a child repository or add an out-of-tree project | [Extending the workspace](docs/extending.md) |
+| Understand CI and test/container image policy | [CI and containers](docs/ci.md) |
+| Understand the superbuild's architectural choices | [Design](DESIGN.md) |
 
-```sh
-cmake --preset dev -DGR4_MODULES=gr4-incubator
-cmake --preset dev -DGR4_MODULES=gnuradio4-control-plane
-cmake --preset dev -DGR4_MODULES=gnuradio4-studio
-```
-
-Studio without control-plane supports remote-backend use; enable both for the
-normal local desktop experience.
-
-Clone the normal profile's missing sources without compiling:
+## Common commands
 
 ```sh
-cmake --build --preset dev --target sources
-```
-
-Use `--preset full` to clone the incubator, control-plane, and Studio sources
-as well.
-
-Build the selected stack and run all component and installed-SDK tests:
-
-```sh
+# Run the selected stack's tests and installed-SDK smoke test.
 cmake --build --preset dev --target check
+
+# List the supplied configure and build profiles.
+cmake --list-presets
+cmake --build --list-presets
+
+# Build only standard blocks (required dependencies are selected automatically).
+cmake --build --preset dev --target gnuradio4-blocks
 ```
 
-Remove one component's build state without touching its source or the shared
-installation:
+## Contributing
 
-```sh
-cmake --build --preset dev --target gnuradio4-blocks-clean
-```
+The repositories under `src/` are ordinary Git working copies. Make component
+changes in their owning repository and follow that repository's contribution
+guidance. This workspace owns cross-component build orchestration, integration
+CI, and shared development workflows.
 
-Edits under `src/` are picked up by the next build. The outer build invokes each
-required child build, while the child Ninja builds perform only incremental
-work.
-
-## Testing
-
-Tests belong to their component repositories and run from the corresponding
-child build directory:
-
-```sh
-ctest --test-dir build/dev/projects/gnuradio4-core --output-on-failure
-ctest --test-dir build/dev/projects/gnuradio4-library --output-on-failure
-ctest --test-dir build/dev/projects/gnuradio4-blocks --output-on-failure
-```
-
-With the `full` preset, `check` additionally runs incubator and control-plane
-CTest, Studio block CTest, and Studio's lint and Vitest commands. The `release`
-preset disables test builds. All other supplied presets enable them.
-
-The `check` target also builds and runs `tests/oot-smoke`, a small external
-consumer that discovers all three installed CMake packages. This verifies the
-public SDK rather than accidentally using headers or targets from the source
-trees.
-
-## Developing GNU Radio 4
-
-The repositories under `src/` are normal Git working copies. Sources cloned by
-the superbuild begin on a detached commit corresponding to the requested ref;
-create a branch before committing:
-
-```sh
-cd src/gnuradio4-blocks
-git switch -c my-feature
-```
-
-Commit, push, and use each repository's own development documentation and issue
-tracker as usual. Reconfiguring the top-level workspace does not fetch, update,
-switch, or reset those working copies.
-
-To use component checkouts stored somewhere else:
-
-```sh
-cmake --preset dev -DGR4_SOURCE_ROOT=/path/to/sources
-cmake --build --preset dev
-```
-
-The source root uses this layout; selected repositories that are missing are
-cloned into it:
-
-```text
-gnuradio4-core/
-gnuradio4-library/
-gnuradio4-blocks/
-gr4-incubator/               # when selected
-gnuradio4-control-plane/     # when selected
-gnuradio4-studio/            # when selected
-```
-
-The generated `activate.sh` adds the selected install prefix to the executable,
-CMake package, pkg-config, configured runtime-library, discovered Python
-site-package, and GNU Radio plugin search paths.
-
-## Out-of-Tree Projects
-
-An out-of-tree CMake project can participate in the same build and consume the
-installed GNU Radio 4 packages:
-
-```sh
-cmake --preset dev -DGR4_EXTRA_PROJECTS=/path/to/gr4-example
-cmake --build --preset dev --target gr4-example
-```
-
-Extra projects registered this way depend on the base core/library/blocks stack.
-They are built by the aggregate target but are not assumed to provide CTest
-tests.
-
-For repositories, tests, or custom dependency relationships that should persist
-in local profiles, copy
-`projects.local.cmake.example` to the ignored `projects.local.cmake` file and
-register each module:
-
-```cmake
-gr4_register_module(
-  NAME my-gr4-module
-  TYPE CMAKE
-  SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../my-gr4-module"
-  DEPENDS gnuradio4-blocks
-  CMAKE_ARGS
-    "-DENABLE_PLUGINS:BOOL=ON"
-  TESTS)
-```
-
-Select it with `-DGR4_MODULES=my-gr4-module`, or assign it to a group with the
-registration's `GROUPS` argument. `TESTS` registers the module's child CTest
-tree with the top-level `check` target and requires that tree to contain at
-least one test.
-
-Project-specific configuration belongs in its `CMAKE_ARGS` list. Options that
-should apply to every CMake component may be supplied through
-`GR4_EXTRA_CMAKE_ARGS`:
-
-```sh
-cmake --preset dev \
-  -DGR4_EXTRA_CMAKE_ARGS="-DUSE_CCACHE=ON" \
-  -DGR4_BUILD_PARALLEL_LEVEL=6
-```
-
-`GR_BUILD_PARALLEL_LEVEL` is a core-project option and should not be passed
-through `GR4_EXTRA_CMAKE_ARGS` as a workspace-wide build limit.
-
-## Top-Level CMake Options
-
-| Option | Default | Description |
-| --- | ---: | --- |
-| `GR4_SOURCE_ROOT` | `src/` | Location of the first-party source repositories |
-| `GR4_MODULE_GROUPS` | `base` | Registered module groups to build |
-| `GR4_MODULES` | empty | Additional registered modules to build |
-| `GR4_EXCLUDE_MODULES` | empty | Registered modules to remove from selected groups |
-| `GR4_EXTRA_PROJECTS` | empty | Additional CMake project paths |
-| `GR4_EXTRA_CMAKE_ARGS` | empty | Additional CMake arguments for every child project |
-| `GR4_BUILD_PARALLEL_LEVEL` | empty | Positive maximum job count for nested CMake builds; falls back to `CMAKE_BUILD_PARALLEL_LEVEL`, then the build tool's native default |
-| `GR4_CORE_CMAKE_ARGS` | empty | Additional arguments for core only |
-| `GR4_LIBRARY_CMAKE_ARGS` | empty | Additional arguments for library only |
-| `GR4_BLOCKS_CMAKE_ARGS` | empty | Additional arguments for blocks only |
-| `GR4_INCUBATOR_CMAKE_ARGS` | empty | Additional arguments for incubator only |
-| `GR4_CONTROL_PLANE_CMAKE_ARGS` | empty | Additional arguments for control-plane only |
-| `GR4_STUDIO_BLOCKS_CMAKE_ARGS` | empty | Additional arguments for Studio blocks only |
-| `GR4_CORE_REPOSITORY` | GNU Radio GitHub repository | Core clone source |
-| `GR4_CORE_REF` | `main` | Core branch, tag, or commit |
-| `GR4_LIBRARY_REPOSITORY` | GNU Radio GitHub repository | Library clone source |
-| `GR4_LIBRARY_REF` | `main` | Library branch, tag, or commit |
-| `GR4_BLOCKS_REPOSITORY` | GNU Radio GitHub repository | Blocks clone source |
-| `GR4_BLOCKS_REF` | `main` | Blocks branch, tag, or commit |
-| `GR4_INCUBATOR_REPOSITORY` | GNU Radio GitHub repository | Incubator clone source |
-| `GR4_INCUBATOR_REF` | `main` | Incubator branch, tag, or commit |
-| `GR4_CONTROL_PLANE_REPOSITORY` | GNU Radio GitHub repository | Control-plane clone source |
-| `GR4_CONTROL_PLANE_REF` | `main` | Control-plane branch, tag, or commit |
-| `GR4_STUDIO_REPOSITORY` | GNU Radio GitHub repository | Studio clone source |
-| `GR4_STUDIO_REF` | `main` | Studio branch, tag, or commit |
-| `GR4_BUILD_TESTING` | `ON` | Build tests in child projects |
-| `GR4_FETCH_DEPS` | `ON` | Allow child projects to fetch selected dependencies |
-| `GR4_WARNINGS_AS_ERRORS` | `ON` | Treat child-project warnings as errors |
-| `GR4_ADDRESS_SANITIZER` | `OFF` | Enable AddressSanitizer in child projects |
-| `GR4_UB_SANITIZER` | `OFF` | Enable UndefinedBehaviorSanitizer in child projects |
-| `BUILD_SHARED_LIBS` | `ON` | Build shared libraries |
-| `CMAKE_INSTALL_PREFIX` | `install/` | Shared installation prefix |
-| `CMAKE_INSTALL_LIBDIR` | `lib` | Library directory, relative to the shared prefix |
-
-## Why Separate Child Builds?
-
-`gnuradio4-library` consumes the installed `gnuradio4` package.
-`gnuradio4-blocks` consumes both the installed core and library packages.
-Out-of-tree modules use those same installed CMake packages and tools.
-
-A single `add_subdirectory()` tree would combine the projects' cache variables,
-dependency targets, generated files, and target namespaces. Separate child
-builds keep those boundaries explicit and ensure the workspace represents how
-GNU Radio 4 is packaged and consumed outside this repository.
-
-## Continuous Integration
-
-The top-level GitHub Actions workflow performs one complete integration build
-using the GNU Radio Ubuntu 24.04 GCC 14 CI image:
-
-```sh
-cmake --preset full-ci
-cmake --build --preset full-ci --target check
-```
-
-The workflow exports `CMAKE_BUILD_PARALLEL_LEVEL=4`, limiting each nested CMake
-component build to four concurrent jobs. As with local builds, this setting does
-not govern Studio's npm, TypeScript, or Vite internal concurrency.
-
-The component repositories retain responsibility for their larger compiler,
-platform, sanitizer, coverage, and WebAssembly matrices. This repository checks
-the contract between the components: ordered installation, package discovery,
-component tests, incubator, control-plane, Studio blocks, the Studio frontend,
-and consumption by an out-of-tree project.
-
-Manual runs accept one `cmake_options` value containing space-separated `-D`
-overrides, so a coordinated branch or fork can replace the manifest defaults
-without requiring workflow changes:
-
-```sh
-gh workflow run ci.yml \
-  -f cmake_options="-DGR4_INCUBATOR_REPOSITORY=https://github.com/me/gr4-incubator.git -DGR4_INCUBATOR_REF=my-branch"
-```
-
-This supports coordinated changes and testing branches from forks without
-hardcoding every repository into the workflow interface. Each override must be
-one shell word; values containing spaces are not supported by this convenience
-input.
-
-Push, pull-request, scheduled, and manual runs otherwise follow each module's
-manifest revision, currently `main`, so CI detects compatibility drift between
-repositories.
-
-## Platform Containers
-
-The OCI container definitions in `containers/` verify the complete workspace
-from a clean checkout.  They deliberately omit local `src/`, `build/`, and
-`install/` directories so the superbuild clones its component repositories as
-it would for a new user.  Each container runs the exact full-workspace check:
-
-```sh
-cmake --preset full
-cmake --build --preset full --target check
-```
-
-Podman is the supported local interface.  Build either verification image from
-the repository root:
-
-```sh
-podman build -f containers/debian-sid/Dockerfile -t gr4-test:debian-sid .
-podman build -f containers/ubuntu-24.04/Dockerfile -t gr4-test:ubuntu-24.04 .
-podman build -f containers/ubuntu-26.04/Dockerfile -t gr4-test:ubuntu-26.04 .
-podman build -f containers/fedora-44/Dockerfile -t gr4-test:fedora-44 .
-```
-
-The default `verify` stage performs the check during the image build.  To keep
-the toolchain image for interactive investigation instead, select its first
-stage and mount a working tree:
-
-```sh
-podman build --target toolchain -f containers/debian-sid/Dockerfile \
-  -t gr4-toolchain:debian-sid .
-podman run --rm -it --userns=keep-id \
-  -v "$PWD:/workspace:Z" -w /workspace \
-  gr4-toolchain:debian-sid full
-```
-
-The final argument selects a CMake build preset and defaults to `full`.  The
-Sid image is a rolling compatibility canary; retain its build log and resolved
-base-image digest when reporting a regression so it can be reproduced after
-Sid advances.
-
-### Run Studio in a browser
-
-The browser-ready Studio image is published to GitHub Container Registry on
-every push to `main`. With Podman, run it and open the displayed address in a
-browser:
-
-```sh
-podman run --rm --pull=always -p 8080:8080 ghcr.io/gnuradio/gnuradio4-studio:latest
-```
-
-Then visit <http://localhost:8080>. The image serves the Studio web bundle and
-proxies its same-origin `/api/*` requests, including WebSockets, to the
-control-plane process inside the container. It is intended for a trusted
-development environment; it does not add authentication or TLS termination.
-After the first publication, set the GitHub Container Registry package
-visibility to **Public** if anonymous pulls should work.
-
-The `Platform containers` workflow rebuilds every Dockerfile in `containers/`
-each Sunday without publishing. The Studio web image is additionally rebuilt
-and published on each push to `main`.
-
-## Helpful Links
+## Helpful links
 
 - [GNU Radio website](https://gnuradio.org/)
 - [GNU Radio wiki](https://wiki.gnuradio.org/)
-- [GNU Radio 4 core issue tracker](https://github.com/gnuradio/gnuradio4-core/issues)
-- [GNU Radio mailing-list archive](https://lists.gnu.org/archive/html/discuss-gnuradio/)
-- [Subscribe to the GNU Radio mailing list](https://lists.gnu.org/mailman/listinfo/discuss-gnuradio)
 - [GNU Radio Matrix chat](https://chat.gnuradio.org/)
 - [GNU Radio 4 technical discussion](https://matrix.to/#/#gr4-technical-users:gnuradio.org)
 
-## License and Copyright
+## Acknowledgements
+
+GNU Radio acknowledges GSI/FAIR (Facility for Antiproton and Ion Research,
+Darmstadt, Germany) and the wider GNU Radio community for their contributions
+to the design and development of GNU Radio 4.0.
+
+## License
 
 The superrepo's CMake orchestration, CI configuration, helper scripts, and
-documentation are distributed under the [MIT License](LICENSE).
-
-GNU Radio 4 core and runtime code is distributed under the MIT License, keeping
-it free for personal, academic, and commercial use. Individual block libraries
-may use other compatible licenses, including GPLv3. Consult each component
-repository for its authoritative license and contribution terms.
-
-Copyright (C) The GNU Radio Authors  
-Copyright (C) Contributors to the GNU Radio Project  
-Copyright (C) FAIR - Facility for Antiproton & Ion Research, Darmstadt, Germany
-
-GNU Radio acknowledges GSI/FAIR and the wider GNU Radio community for their
-contributions to the design and development of GNU Radio 4.0.
+documentation are distributed under the [MIT License](LICENSE). Individual
+component repositories retain their own authoritative licensing and
+contribution terms.
