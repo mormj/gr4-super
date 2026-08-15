@@ -1,30 +1,27 @@
-<!-- PR TITLE: DESCRIBE IN FEW WORDS WHAT IS DONE; for example: -->
-<!-- Buffer overflow: Avoid destruction of universe in gfsk_mod_cc -->
 ## Description
-<!--- Why this change? What problem does it solve? -->
 
-## Declaration of Willingness To Own
+<!-- What does this workspace change solve or improve? -->
 
-- [ ] I have tried the code change I'm proposing; it not only builds, but also **verifiably fulfills the purpose**.
+## Affected area
 
-(This is mandatory. If you can't build GNU Radio, please come [talk to us](https://wiki.gnuradio.org/index.php?title=Chat) before opening the PR.)
+<!-- Module manifest, CMake/preset, integration test, container, CI, or docs. -->
 
-## Related Issue
-<!--- If this PR fully addresses an issue, please say "Fixes #1234" -->
+## Component coordination
 
-## Which blocks/areas does this affect?
+<!-- Link related component pull requests or issues. Component source changes
+     should be submitted to their owning repositories. -->
 
-## Testing Done
+## Testing
+
+<!-- Include the exact commands and results. For example:
+     cmake --preset dev
+     cmake --build --preset dev --target check -->
 
 ## Checklist
-<!--- Go over all the following points, and put an `x` in all the
-<!--- boxes that apply. Note that some of these may not be valid -->
-<!--- for all PRs. -->
 
-- [ ] I am proposing a change I understand and have tested to be effective.
-- [ ] I have read the [CONTRIBUTING document](https://github.com/gnuradio/gnuradio/blob/main/CONTRIBUTING.md).
-- [ ] I have squashed my commits to have one significant change per commit.
-- [ ] I [have signed-off my commits before making this PR](https://github.com/gnuradio/gnuradio/blob/main/CONTRIBUTING.md#dco-signed)
-- [ ] My code follows the code style of this project. See [GREP1.md](https://github.com/gnuradio/greps/blob/main/grep-0001-coding-guidelines.md).
-- [ ] I have updated [the documentation](https://wiki.gnuradio.org/index.php/Main_Page#Documentation) where necessary.
-- [ ] I have added tests to cover my changes, and all previous tests pass.
+- [ ] I understand and have tested this change.
+- [ ] I have read the [contribution guide](https://github.com/gnuradio/gnuradio4/blob/main/CONTRIBUTING.md).
+- [ ] Every commit has a [DCO sign-off](https://github.com/gnuradio/gnuradio4/blob/main/CONTRIBUTING.md#dco-sign-off).
+- [ ] I have linked related component changes, when applicable.
+- [ ] I have updated relevant documentation.
+- [ ] I have added or updated tests where appropriate.
