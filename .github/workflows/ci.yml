@@ -22,8 +22,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dco:
+    name: DCO
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check commit signoffs
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const missing = commits.filter(({ commit }) => !/^Signed-off-by:\s.+$/im.test(commit.message));
+
+            for (const { sha } of missing) {
+              core.error(`Commit ${sha} is missing a Signed-off-by line`);
+            }
+
+            if (missing.length > 0) {
+              core.setFailed(`${missing.length} commit(s) missing DCO signoff`);
+            }
+
   integration:
     name: Ubuntu 24.04 | GCC 14 | complete stack
+    needs: dco
     runs-on: ubuntu-latest
     timeout-minutes: 120
     container:
@@ -60,6 +87,7 @@ jobs:
 
   studio-web-image:
     name: Publish Studio web image
+    needs: dco
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 120
