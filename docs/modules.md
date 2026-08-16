@@ -1,7 +1,8 @@
 # Module configuration
 
 `modules.cmake` is the checked-in workspace manifest. It declares repositories,
-dependencies, build adapters, tests, and membership in named module groups.
+dependencies, build adapters, optional child-test integration, and membership
+in named module groups.
 `projects.local.cmake` is its ignored, machine-local extension.
 
 ## Select modules
@@ -51,10 +52,12 @@ gr4_register_module(
 ```
 
 The declaration creates build, download, clean, and aggregate integration and
-exposes repository/ref/CMake-argument cache variables. `TESTS` additionally
-registers the child with the top-level `check` target. The `CMAKE` and `NODE`
-module types use generic adapters; `SOURCE_SUBDIR` covers a CMake project below
-a repository root.
+exposes repository/ref/CMake-argument cache variables. `TESTS` enables and
+registers the child test suite with the top-level `check` target. It is intended
+for a locally registered project that does not have its own CI; first-party
+component QA remains in its owning repository. The `CMAKE` and `NODE` module
+types use generic adapters; `SOURCE_SUBDIR` covers a CMake project below a
+repository root.
 
 ## Registration reference
 
@@ -73,7 +76,7 @@ a repository root.
 | `OPTIONAL_DEPENDS` | Dependencies used only when independently selected |
 | `SOURCE_PROVIDER` | For `NODE`, module that populates the shared repository |
 | `CMAKE_ARGS` | Fixed additional arguments for a `CMAKE` child |
-| `TESTS` | Register child tests with the top-level `check` target |
+| `TESTS` | Enable and register child tests with the top-level `check` target |
 
 Declarations are ordered: dependencies and source providers must come first.
 Configuration rejects unknown arguments, missing values, unknown modules,
@@ -105,7 +108,7 @@ repository's package scripts rather than `CMAKE_ARGS`.
 | `GR4_INCUBATOR_REPOSITORY`, `GR4_INCUBATOR_REF` | GNU Radio, `main` | Incubator clone source and revision |
 | `GR4_CONTROL_PLANE_REPOSITORY`, `GR4_CONTROL_PLANE_REF` | GNU Radio, `main` | Control-plane clone source and revision |
 | `GR4_STUDIO_REPOSITORY`, `GR4_STUDIO_REF` | GNU Radio, `main` | Studio clone source and revision |
-| `GR4_BUILD_TESTING` | `ON` | Build child-project tests |
+| `GR4_BUILD_TESTING` | `ON` | Allow explicitly registered child-project tests |
 | `GR4_FETCH_DEPS` | `ON` | Allow selected dependency downloads |
 | `GR4_WARNINGS_AS_ERRORS` | `ON` | Treat child warnings as errors |
 | `GR4_ADDRESS_SANITIZER` | `OFF` | Enable AddressSanitizer in children |

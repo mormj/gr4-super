@@ -36,6 +36,9 @@ set(GR4_BUILD_PARALLEL_LEVEL
 set(CMAKE_INSTALL_LIBDIR
     "lib"
     CACHE STRING "Relative library installation directory shared by all child projects")
+set(CMAKE_INSTALL_BINDIR
+    "bin"
+    CACHE STRING "Relative binary installation directory shared by all child projects")
 
 set(gr4_effective_build_parallel_level "${GR4_BUILD_PARALLEL_LEVEL}")
 if(gr4_effective_build_parallel_level STREQUAL ""
@@ -141,6 +144,11 @@ function(gr4_add_project name)
   endif()
   list(JOIN prefix_path "|" prefix_path_arg)
 
+  set(child_testing OFF)
+  if(PROJECT_TESTS AND GR4_BUILD_TESTING)
+    set(child_testing ON)
+  endif()
+
   set(cmake_args
       "-DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}"
       "-DCMAKE_INSTALL_LIBDIR:STRING=${CMAKE_INSTALL_LIBDIR}"
@@ -148,7 +156,7 @@ function(gr4_add_project name)
       "-DCMAKE_PROGRAM_PATH:PATH=${CMAKE_INSTALL_PREFIX}/bin"
       "-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}"
       "-DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}"
-      "-DENABLE_TESTING:BOOL=${GR4_BUILD_TESTING}"
+      "-DENABLE_TESTING:BOOL=${child_testing}"
       "-DPKG_CONFIG_USE_CMAKE_PREFIX_PATH:BOOL=ON"
       "-DGR_USE_FETCHCONTENT_DEPS:BOOL=${GR4_FETCH_DEPS}"
       "-DWARNINGS_AS_ERRORS:BOOL=${GR4_WARNINGS_AS_ERRORS}"
@@ -207,7 +215,7 @@ function(gr4_add_project name)
 
   set_property(GLOBAL APPEND PROPERTY GR4_PROJECT_TARGETS "${name}")
   set_property(GLOBAL APPEND PROPERTY GR4_SOURCE_TARGETS "${name}-download")
-  if(PROJECT_TESTS AND GR4_BUILD_TESTING)
+  if(child_testing)
     set_property(GLOBAL APPEND PROPERTY GR4_CTEST_DIRS "${project_binary_dir}")
     set_property(GLOBAL APPEND PROPERTY GR4_TEST_TARGETS "${name}")
   endif()
@@ -379,6 +387,23 @@ if("gnuradio4-blocks" IN_LIST GR4_SELECTED_MODULES)
   list(APPEND integration_test_targets oot-smoke)
 endif()
 
+if("gnuradio4-control-plane" IN_LIST GR4_SELECTED_MODULES AND UNIX)
+  add_custom_target(
+    control-plane-smoke
+    COMMAND
+      "${CMAKE_COMMAND}" -E env
+      "GNURADIO4_PLUGIN_DIRECTORIES=${GR4_INSTALL_LIBDIR_FULL}/gnuradio-4/plugins:${GR4_INSTALL_LIBDIR_FULL}"
+      "LD_LIBRARY_PATH=${GR4_INSTALL_LIBDIR_FULL}"
+      "DYLD_LIBRARY_PATH=${GR4_INSTALL_LIBDIR_FULL}"
+      /bin/sh "${CMAKE_SOURCE_DIR}/tests/control-plane-smoke.sh"
+      "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/gr4cp_server"
+      "${CMAKE_COMMAND}"
+    DEPENDS gnuradio4-control-plane
+    USES_TERMINAL
+    COMMENT "Verifying the installed control plane and GNU Radio 4 plugin catalog")
+  list(APPEND integration_test_targets control-plane-smoke)
+endif()
+
 set(check_commands "")
 set(check_environment
     "${CMAKE_COMMAND}" -E env
@@ -403,7 +428,7 @@ if(check_commands)
     ${check_commands}
     DEPENDS ${integration_test_targets} ${test_targets}
     USES_TERMINAL
-    COMMENT "Running GNU Radio 4 component and installed-SDK integration tests")
+    COMMENT "Running GNU Radio 4 integration tests")
 else()
   add_custom_target(
     check

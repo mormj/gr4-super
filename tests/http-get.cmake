@@ -1,0 +1,11 @@
+if(NOT DEFINED GR4_HTTP_URL OR NOT DEFINED GR4_HTTP_OUTPUT)
+  message(FATAL_ERROR "GR4_HTTP_URL and GR4_HTTP_OUTPUT are required")
+endif()
+
+file(REMOVE "${GR4_HTTP_OUTPUT}")
+file(DOWNLOAD "${GR4_HTTP_URL}" "${GR4_HTTP_OUTPUT}" STATUS status TIMEOUT 1)
+list(GET status 0 status_code)
+if(NOT status_code EQUAL 0)
+  file(REMOVE "${GR4_HTTP_OUTPUT}")
+  message(FATAL_ERROR "HTTP request failed: ${status}")
+endif()

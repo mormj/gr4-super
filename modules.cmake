@@ -9,8 +9,7 @@ gr4_register_module(
   OPTIONS_KEY CORE
   REPOSITORY https://github.com/gnuradio/gnuradio4-core.git
   REF main
-  GROUPS base
-  TESTS)
+  GROUPS base)
 
 gr4_register_module(
   NAME gnuradio4-library
@@ -21,8 +20,7 @@ gr4_register_module(
   REPOSITORY https://github.com/gnuradio/gnuradio4-library.git
   REF main
   GROUPS base
-  DEPENDS gnuradio4-core
-  TESTS)
+  DEPENDS gnuradio4-core)
 
 gr4_register_module(
   NAME gnuradio4-blocks
@@ -33,8 +31,7 @@ gr4_register_module(
   REPOSITORY https://github.com/gnuradio/gnuradio4-blocks.git
   REF main
   GROUPS base
-  DEPENDS gnuradio4-library
-  TESTS)
+  DEPENDS gnuradio4-library)
 
 gr4_register_module(
   NAME gr4-incubator
@@ -45,8 +42,7 @@ gr4_register_module(
   REPOSITORY https://github.com/gnuradio/gr4-incubator.git
   REF main
   GROUPS full experimental
-  DEPENDS gnuradio4-blocks
-  TESTS)
+  DEPENDS gnuradio4-blocks)
 
 gr4_register_module(
   NAME gnuradio4-control-plane
@@ -57,8 +53,7 @@ gr4_register_module(
   REPOSITORY https://github.com/gnuradio/gnuradio4-control-plane.git
   REF main
   GROUPS full applications
-  DEPENDS gnuradio4-blocks
-  TESTS)
+  DEPENDS gnuradio4-blocks)
 
 gr4_register_module(
   NAME gnuradio4-studio-blocks
@@ -73,8 +68,7 @@ gr4_register_module(
   DEPENDS gnuradio4-blocks
   CMAKE_ARGS
     "-DCMAKE_CXX_FLAGS_INIT:STRING=-D_GLIBCXX_USE_TBB_PAR_BACKEND=0"
-    "-DCMAKE_PROJECT_INCLUDE:FILEPATH=${CMAKE_SOURCE_DIR}/cmake/EnableTesting.cmake"
-  TESTS)
+    "-DCMAKE_PROJECT_INCLUDE:FILEPATH=${CMAKE_SOURCE_DIR}/cmake/EnableTesting.cmake")
 
 gr4_register_module(
   NAME gnuradio4-studio
@@ -82,5 +76,4 @@ gr4_register_module(
   SOURCE_DIR gnuradio4-studio
   GROUPS full applications
   SOURCE_PROVIDER gnuradio4-studio-blocks
-  OPTIONAL_DEPENDS gnuradio4-control-plane
-  TESTS)
+  OPTIONAL_DEPENDS gnuradio4-control-plane)
