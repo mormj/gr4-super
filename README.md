@@ -9,7 +9,6 @@
 
 [![Main CI](https://github.com/gnuradio/gnuradio4/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/gnuradio/gnuradio4/actions/workflows/ci.yml)
 [![Studio Web image](https://img.shields.io/badge/ghcr.io-gnuradio4--studio-2496ED?logo=github)](https://github.com/gnuradio/gnuradio4/pkgs/container/gnuradio4-studio)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > [!IMPORTANT]
 > GNU Radio 4.0 (GR4) is a maturing beta as it approaches its first stable
@@ -86,44 +85,25 @@ and resource limits.
 
 ## Repository dependencies
 
-```mermaid
-flowchart TD
-    subgraph foundation[Foundation]
-        direction LR
-        core[gnuradio4-core]
-        library[gnuradio4-library]
-    end
-
-    subgraph modules[Modules]
-        direction LR
-        blocks[gnuradio4-blocks]
-        incubator[gr4-incubator]
-        oots["Out-of-tree modules (OOTs)"]
-    end
-
-    core --> blocks
-    library --> blocks
-    core --> incubator
-    library --> incubator
-    core --> oots
-    library --> oots
-
-    subgraph applications[Applications]
-        direction LR
-        control_plane[gnuradio4-control-plane] --> studio[gnuradio4-studio]
-    end
-
-    core --> control_plane
-    blocks -. plugins .-> control_plane
-    incubator -. plugins .-> control_plane
-    oots -. plugins .-> control_plane
+```text
+Foundation
+  [gnuradio4-core]     [gnuradio4-library]
+            \             /
+             \           /
+Modules       [blocks] [incubator] [OOTs]
+                  .        .         .
+                  `------ runtime plugins ------.
+                                                  v
+Applications                          [control-plane] --> [studio]
 ```
 
-Solid arrows point from a build dependency to the repository that uses it. The
-dotted connections into the control plane (`gr4cp`) denote runtime plugin
-discovery rather than a build dependency. The superbuild coordinates the
-repositories it includes; OOTs remain independently owned and can be added to
-the workspace as described in the [extending guide](docs/extending.md).
+Core and library are build dependencies of blocks, incubator, and OOTs; the
+control plane depends on core at build time. Dotted paths are runtime plugin
+discovery.
+
+The superbuild coordinates the repositories it includes; OOTs remain
+independently owned and can be added to the workspace as described in the
+[extending guide](docs/extending.md).
 
 ## Documentation
 
