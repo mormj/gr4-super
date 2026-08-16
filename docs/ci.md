@@ -12,8 +12,10 @@ cmake --build --preset full-ci --target check
 ```
 
 It exports `CMAKE_BUILD_PARALLEL_LEVEL=4`, limiting nested CMake builds. The
-component repositories retain ownership of broader compiler, platform,
-sanitizer, coverage, and WebAssembly matrices.
+component repositories retain ownership of unit and QA tests as well as broader
+compiler, platform, sanitizer, coverage, and WebAssembly matrices. The
+superbuild gate covers the installed SDK, plugin discovery, and control-plane
+integration; component QA—including incubator QA—runs in its owning repository.
 
 Manual runs accept a space-separated `cmake_options` value for coordinated
 branch or fork testing:

@@ -15,9 +15,13 @@ Run the selected workspace's complete integration check with:
 cmake --build --preset dev --target check
 ```
 
-For the full profile, `check` also runs incubator and control-plane CTest,
-Studio-block CTest, and Studio's lint and Vitest commands. The `release`
-profile disables test builds; all other supplied profiles enable them.
+`check` is an integration gate rather than an aggregate component-QA runner.
+It builds an external OOT consumer against the installed SDK. In the full
+profile, it also starts the installed control plane, verifies its health
+endpoint, and confirms that its GNU Radio plugin-backed block catalog is
+nonempty. Component unit and QA tests, including Studio lint and Vitest, remain
+in their owning repositories' CI. The `release` profile disables explicitly
+registered child tests; all other supplied profiles permit them.
 
 `check` additionally builds and runs `tests/oot-smoke`, an external consumer
 that discovers all three installed CMake packages. It verifies the installed
