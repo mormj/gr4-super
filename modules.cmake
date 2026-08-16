@@ -77,3 +77,14 @@ gr4_register_module(
   GROUPS full applications
   SOURCE_PROVIDER gnuradio4-studio-blocks
   OPTIONAL_DEPENDS gnuradio4-control-plane)
+
+gr4_register_module(
+  NAME gr4-modtool
+  TYPE PYTHON
+  SOURCE_DIR gr4_modtool
+  SOURCE_KEY MODTOOL
+  CONSOLE_SCRIPT gr4_modtool
+  REPOSITORY https://github.com/TheWylieStCoyote/gr4_modtool.git
+  REF main
+  GROUPS full
+  DEPENDS gnuradio4-blocks)

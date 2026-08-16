@@ -15,6 +15,7 @@ function(gr4_register_module)
       SOURCE_DIR
       SOURCE_SUBDIR
       SOURCE_PROVIDER
+      CONSOLE_SCRIPT
       REPOSITORY
       REF
       SOURCE_KEY
@@ -41,7 +42,7 @@ function(gr4_register_module)
   if(NOT MODULE_TYPE)
     set(MODULE_TYPE CMAKE)
   endif()
-  if(NOT MODULE_TYPE MATCHES "^(CMAKE|NODE)$")
+  if(NOT MODULE_TYPE MATCHES "^(CMAKE|NODE|PYTHON)$")
     message(FATAL_ERROR
       "Module '${MODULE_NAME}' has unsupported TYPE '${MODULE_TYPE}'")
   endif()
@@ -63,6 +64,17 @@ function(gr4_register_module)
       AND (MODULE_SOURCE_SUBDIR OR MODULE_OPTIONS_KEY OR MODULE_CMAKE_ARGS))
     message(FATAL_ERROR
       "Node module '${MODULE_NAME}' cannot use SOURCE_SUBDIR, OPTIONS_KEY, or CMAKE_ARGS")
+  endif()
+  if(MODULE_TYPE STREQUAL "PYTHON"
+      AND (MODULE_SOURCE_SUBDIR OR MODULE_SOURCE_PROVIDER OR MODULE_OPTIONS_KEY OR MODULE_CMAKE_ARGS))
+    message(FATAL_ERROR
+      "Python module '${MODULE_NAME}' cannot use SOURCE_SUBDIR, SOURCE_PROVIDER, OPTIONS_KEY, or CMAKE_ARGS")
+  endif()
+  if(MODULE_TYPE STREQUAL "PYTHON" AND NOT MODULE_CONSOLE_SCRIPT)
+    message(FATAL_ERROR "Python module '${MODULE_NAME}' requires CONSOLE_SCRIPT")
+  endif()
+  if(NOT MODULE_TYPE STREQUAL "PYTHON" AND MODULE_CONSOLE_SCRIPT)
+    message(FATAL_ERROR "Only Python module '${MODULE_NAME}' may use CONSOLE_SCRIPT")
   endif()
   if(MODULE_NAME IN_LIST MODULE_DEPENDS
       OR MODULE_NAME IN_LIST MODULE_OPTIONAL_DEPENDS)
@@ -132,6 +144,7 @@ function(gr4_register_module)
   _gr4_set_module_property("${MODULE_NAME}" SOURCE_SUBDIR "${MODULE_SOURCE_SUBDIR}")
   _gr4_set_module_property(
     "${MODULE_NAME}" SOURCE_PROVIDER "${MODULE_SOURCE_PROVIDER}")
+  _gr4_set_module_property("${MODULE_NAME}" CONSOLE_SCRIPT "${MODULE_CONSOLE_SCRIPT}")
   _gr4_set_module_property("${MODULE_NAME}" REPOSITORY_VARIABLE "${repository_variable}")
   _gr4_set_module_property("${MODULE_NAME}" REF_VARIABLE "${ref_variable}")
   _gr4_set_module_property("${MODULE_NAME}" CMAKE_ARGS_VARIABLE "${cmake_args_variable}")
@@ -269,6 +282,7 @@ function(gr4_realize_modules)
     _gr4_get_module_property(module_source_dir "${name}" SOURCE_DIR)
     _gr4_get_module_property(module_source_subdir "${name}" SOURCE_SUBDIR)
     _gr4_get_module_property(module_source_provider "${name}" SOURCE_PROVIDER)
+    _gr4_get_module_property(module_console_script "${name}" CONSOLE_SCRIPT)
     _gr4_get_module_property(repository_variable "${name}" REPOSITORY_VARIABLE)
     _gr4_get_module_property(ref_variable "${name}" REF_VARIABLE)
     _gr4_get_module_property(cmake_args_variable "${name}" CMAKE_ARGS_VARIABLE)
@@ -330,6 +344,20 @@ function(gr4_realize_modules)
         "${name}"
         SOURCE_DIR "${module_source_dir}"
         SOURCE_PROVIDER "${module_source_provider}"
+        ${repository_arguments}
+        DEPENDS ${module_dependencies}
+        ${test_argument})
+    elseif(module_type STREQUAL "PYTHON")
+      set(repository_arguments "")
+      if(repository_variable)
+        set(repository_arguments
+            GIT_REPOSITORY "${${repository_variable}}"
+            GIT_TAG "${${ref_variable}}")
+      endif()
+      gr4_add_python_project(
+        "${name}"
+        SOURCE_DIR "${module_source_dir}"
+        CONSOLE_SCRIPT "${module_console_script}"
         ${repository_arguments}
         DEPENDS ${module_dependencies}
         ${test_argument})

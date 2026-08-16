@@ -35,13 +35,14 @@ cmake --build --preset dev
 source build/dev/activate.sh
 ```
 
-Build the complete workspace, including incubator, control-plane, and the
-desktop Studio application:
+Build the complete workspace, including incubator, control-plane, Studio, and
+the `gr4_modtool` OOT development tool:
 
 ```sh
 cmake --preset full
 cmake --build --preset full
 source build/full/activate.sh
+gr4_modtool --help
 gr4-studio
 ```
 
@@ -68,9 +69,10 @@ alternative; see [CI and containers](docs/ci.md#docker-and-podman).
 ## Requirements
 
 The core stack requires CMake 3.27+, Ninja, Git, and a C++23 compiler (GCC 14+
-or a current Clang). The complete Studio workspace also requires Node.js 22 and
-npm. See [Build guide](docs/building.md) for platform setup, profile choices,
-and resource limits.
+or a current Clang). The complete workspace also requires Python 3.11+ with
+`venv` support; Studio additionally requires Node.js 22 and npm. See [Build
+guide](docs/building.md) for platform setup, profile choices, and resource
+limits.
 
 ## Workspace components
 
@@ -82,6 +84,7 @@ and resource limits.
 | `gr4-incubator` | Experimental blocks, schedulers, and utilities |
 | `gnuradio4-control-plane` | Runtime and HTTP control service |
 | `gnuradio4-studio` | Studio blocks plus browser and desktop application |
+| `gr4-modtool` | Create and inspect GNU Radio 4 out-of-tree modules |
 
 ## Repository dependencies
 

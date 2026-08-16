@@ -10,7 +10,7 @@ in named module groups.
 | Group | Modules |
 | --- | --- |
 | `base` | core, library, blocks |
-| `full` | incubator, control-plane, Studio blocks and application |
+| `full` | incubator, control-plane, Studio blocks and application, modtool |
 | `experimental` | incubator |
 | `applications` | control-plane, Studio blocks and application |
 
@@ -55,16 +55,16 @@ The declaration creates build, download, clean, and aggregate integration and
 exposes repository/ref/CMake-argument cache variables. `TESTS` enables and
 registers the child test suite with the top-level `check` target. It is intended
 for a locally registered project that does not have its own CI; first-party
-component QA remains in its owning repository. The `CMAKE` and `NODE` module
-types use generic adapters; `SOURCE_SUBDIR` covers a CMake project below a
-repository root.
+component QA remains in its owning repository. The `CMAKE`, `NODE`, and
+`PYTHON` module types use generic adapters; `SOURCE_SUBDIR` covers a CMake
+project below a repository root.
 
 ## Registration reference
 
 | Argument | Meaning |
 | --- | --- |
 | `NAME` | Required unique target and module name |
-| `TYPE` | `CMAKE` by default, or `NODE` |
+| `TYPE` | `CMAKE` by default, or `NODE` or `PYTHON` |
 | `SOURCE_DIR` | Source path; relative paths resolve below `GR4_SOURCE_ROOT` |
 | `SOURCE_SUBDIR` | CMake project directory below repository root |
 | `REPOSITORY` | Git URL used only when the source is missing |
@@ -75,6 +75,7 @@ repository root.
 | `DEPENDS` | Required registered modules, selected automatically |
 | `OPTIONAL_DEPENDS` | Dependencies used only when independently selected |
 | `SOURCE_PROVIDER` | For `NODE`, module that populates the shared repository |
+| `CONSOLE_SCRIPT` | Required console script installed by a `PYTHON` module |
 | `CMAKE_ARGS` | Fixed additional arguments for a `CMAKE` child |
 | `TESTS` | Enable and register child tests with the top-level `check` target |
 
@@ -83,7 +84,10 @@ Configuration rejects unknown arguments, missing values, unknown modules,
 invalid cache keys, self-dependencies, forward dependencies, cycles, and
 attempts to exclude a required dependency. `SOURCE_PROVIDER` and `REPOSITORY`
 are mutually exclusive. Node-specific customization belongs in the owning
-repository's package scripts rather than `CMAKE_ARGS`.
+repository's package scripts rather than `CMAKE_ARGS`. A `PYTHON` module is
+installed into a dedicated virtual environment under the shared prefix, with
+its declared console script linked into the prefix's `bin/`; it is therefore
+available after sourcing `activate.sh`.
 
 ## Top-level options
 
@@ -108,6 +112,7 @@ repository's package scripts rather than `CMAKE_ARGS`.
 | `GR4_INCUBATOR_REPOSITORY`, `GR4_INCUBATOR_REF` | GNU Radio, `main` | Incubator clone source and revision |
 | `GR4_CONTROL_PLANE_REPOSITORY`, `GR4_CONTROL_PLANE_REF` | GNU Radio, `main` | Control-plane clone source and revision |
 | `GR4_STUDIO_REPOSITORY`, `GR4_STUDIO_REF` | GNU Radio, `main` | Studio clone source and revision |
+| `GR4_MODTOOL_REPOSITORY`, `GR4_MODTOOL_REF` | gr4_modtool, `main` | Modtool clone source and revision |
 | `GR4_BUILD_TESTING` | `ON` | Allow explicitly registered child-project tests |
 | `GR4_FETCH_DEPS` | `ON` | Allow selected dependency downloads |
 | `GR4_WARNINGS_AS_ERRORS` | `ON` | Treat child warnings as errors |

@@ -326,6 +326,91 @@ function(gr4_add_node_project name)
   endif()
 endfunction()
 
+function(gr4_add_python_project name)
+  set(options TESTS)
+  set(one_value_args SOURCE_DIR CONSOLE_SCRIPT GIT_REPOSITORY GIT_TAG)
+  set(multi_value_args DEPENDS)
+  cmake_parse_arguments(PROJECT "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+
+  if(NOT PROJECT_SOURCE_DIR)
+    message(FATAL_ERROR "gr4_add_python_project(${name}) requires SOURCE_DIR")
+  endif()
+  if(TARGET "${name}")
+    message(FATAL_ERROR "Duplicate project name '${name}'")
+  endif()
+  if(NOT PROJECT_CONSOLE_SCRIPT)
+    message(FATAL_ERROR "gr4_add_python_project(${name}) requires CONSOLE_SCRIPT")
+  endif()
+
+  find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
+  cmake_path(ABSOLUTE_PATH PROJECT_SOURCE_DIR BASE_DIRECTORY "${CMAKE_SOURCE_DIR}" NORMALIZE)
+
+  if(EXISTS "${PROJECT_SOURCE_DIR}/pyproject.toml")
+    set(download_args
+        DOWNLOAD_COMMAND ""
+        UPDATE_COMMAND ""
+        PATCH_COMMAND "")
+  elseif(PROJECT_GIT_REPOSITORY)
+    if(NOT PROJECT_GIT_TAG)
+      set(PROJECT_GIT_TAG main)
+    endif()
+    set(download_args
+        DOWNLOAD_COMMAND
+          "${CMAKE_COMMAND}"
+          "-DGIT_EXECUTABLE:FILEPATH=${GIT_EXECUTABLE}"
+          "-DSOURCE_DIR:PATH=<SOURCE_DIR>"
+          "-DSOURCE_MARKER:STRING=pyproject.toml"
+          "-DGIT_REPOSITORY:STRING=${PROJECT_GIT_REPOSITORY}"
+          "-DGIT_TAG:STRING=${PROJECT_GIT_TAG}"
+          -P "${CMAKE_SOURCE_DIR}/cmake/CloneIfMissing.cmake"
+        UPDATE_COMMAND ""
+        PATCH_COMMAND "")
+  else()
+    message(FATAL_ERROR
+      "Missing ${PROJECT_SOURCE_DIR}/pyproject.toml for '${name}' and no GIT_REPOSITORY was provided")
+  endif()
+
+  set(project_stamp_dir "${CMAKE_BINARY_DIR}/stamp/${name}")
+  set(project_venv_dir "${CMAKE_INSTALL_PREFIX}/libexec/${name}")
+  set(project_script_path "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/${PROJECT_CONSOLE_SCRIPT}")
+  ExternalProject_Add(
+    "${name}"
+    ${download_args}
+    SOURCE_DIR "${PROJECT_SOURCE_DIR}"
+    STAMP_DIR "${project_stamp_dir}"
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND
+      "${Python3_EXECUTABLE}" -m venv "${project_venv_dir}"
+    COMMAND
+      "${project_venv_dir}/bin/python" -m pip install
+      --upgrade
+      --disable-pip-version-check
+      "<SOURCE_DIR>"
+    COMMAND
+      "${CMAKE_COMMAND}" -E make_directory "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
+    COMMAND
+      "${CMAKE_COMMAND}" -E rm -f "${project_script_path}"
+    COMMAND
+      "${CMAKE_COMMAND}" -E create_symlink
+      "${project_venv_dir}/bin/${PROJECT_CONSOLE_SCRIPT}"
+      "${project_script_path}"
+    INSTALL_DIR "${CMAKE_INSTALL_PREFIX}"
+    BUILD_ALWAYS TRUE
+    STEP_TARGETS download
+    DEPENDS ${PROJECT_DEPENDS}
+    EXCLUDE_FROM_ALL TRUE
+    USES_TERMINAL_INSTALL TRUE)
+
+  add_custom_target(
+    "${name}-clean"
+    COMMAND "${CMAKE_COMMAND}" -E rm -rf "${project_stamp_dir}"
+    COMMENT "Removing ${name}'s build state")
+
+  set_property(GLOBAL APPEND PROPERTY GR4_PROJECT_TARGETS "${name}")
+  set_property(GLOBAL APPEND PROPERTY GR4_SOURCE_TARGETS "${name}-download")
+endfunction()
+
 include("${CMAKE_SOURCE_DIR}/modules.cmake")
 
 # Local manifests use the same registration API as the checked-in manifest.
@@ -402,6 +487,23 @@ if("gnuradio4-control-plane" IN_LIST GR4_SELECTED_MODULES AND UNIX)
     USES_TERMINAL
     COMMENT "Verifying the installed control plane and GNU Radio 4 plugin catalog")
   list(APPEND integration_test_targets control-plane-smoke)
+endif()
+
+if("gr4-modtool" IN_LIST GR4_SELECTED_MODULES AND UNIX)
+  set(modtool_smoke_source_dir "${CMAKE_BINARY_DIR}/tests/modtool-smoke")
+  add_custom_target(
+    modtool-smoke
+    COMMAND "${CMAKE_COMMAND}" -E rm -rf "${modtool_smoke_source_dir}"
+    COMMAND
+      /bin/sh "${CMAKE_SOURCE_DIR}/tests/modtool-smoke.sh"
+      "${CMAKE_BINARY_DIR}/activate.sh"
+      "${modtool_smoke_source_dir}"
+      "${CMAKE_INSTALL_PREFIX}"
+      "${CMAKE_COMMAND}"
+    DEPENDS gr4-modtool gnuradio4-blocks
+    USES_TERMINAL
+    COMMENT "Creating and configuring an OOT with the installed gr4_modtool")
+  list(APPEND integration_test_targets modtool-smoke)
 endif()
 
 set(check_commands "")
